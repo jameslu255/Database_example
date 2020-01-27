@@ -14,4 +14,7 @@ class Page:
         if self.has_capacity():
             self.num_records += 1
             self.data[self.num_records] = value
+            return 0
+        else:
+            return -1
 
