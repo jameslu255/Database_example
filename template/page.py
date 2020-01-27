@@ -8,7 +8,6 @@ class Page:
         self.data = bytearray(4096)
 
     def has_capacity(self):
-        # pass
         return (4096 - self.num_records) > 0
 
     def write(self, value):
