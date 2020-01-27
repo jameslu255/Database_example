@@ -9,13 +9,10 @@ class Page:
 
     def has_capacity(self):
         # pass
-        empty_record_count = 0
-        for record in self.data:
-            if record == 0:
-                empty_record_count += 1
-        return empty_record_count
+        return 4096 - self.num_records
 
     def write(self, value):
         self.num_records += 1
-        pass
+        if self.has_capacity() > 0:
+            self.data[self.num_records] = value
 
