@@ -1,4 +1,4 @@
-from template.config import *
+#from template.config import *
 
 
 class Page:
@@ -12,8 +12,10 @@ class Page:
 
     def write(self, value):
         if self.has_capacity():
-            self.num_records += 1
+            # data will be written at idx 4 since 
+            # the first 4 columns are reserved
             self.data[self.num_records] = value
+            self.num_records += 1
             return 0
         else:
             return -1
