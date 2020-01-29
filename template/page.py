@@ -10,6 +10,25 @@ class Page:
     def has_capacity(self):
         return (4096 - 8 * self.num_records) > 0
 
+    def get_record_bytes(self, record_num):
+        """
+        Returns the given record number as bytes
+        """
+        # If out of bounds, return 0 bytes
+        if (record_num >= num_records or record_num < 0):
+            return bytes()
+        return self.data[record_num * 8: record_num * 8 + 8]
+
+    def get_record_int(self, record_num):
+        """
+        Returns the given record number as int 
+        """
+        byteval = self.get_record_bytes(record_num)
+        if (byteVal == bytes()):
+            return -1
+        return int.from_bytes(byteval, "big")
+
+
     def write(self, value):
         if self.has_capacity():
             self.data += value.to_bytes(8, "big")
