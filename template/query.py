@@ -25,7 +25,7 @@ class Query:
 
     def insert(self, *columns):           
         page_directory_indexes = []
-        record = Record(self.table.records, columns[0], columns)
+        record = Record(self.table.records + 1, columns[0], columns)
         schema_encoding = 0 # '0' * self.table.num_columns
         timestamp = int(time.time())
         rid = record.rid

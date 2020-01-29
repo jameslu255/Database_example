@@ -63,10 +63,15 @@ class Table:
         index_relative = self.free_pages[index]
         error = self.pages[index_relative].write(value)
         if error == -1: # maximum size reached in page
-            print("page for " + str(index) + " is full, making a new one")
+            print("col:" + str(index) + " in page " + str(index_relative) + " is full, making a new one")
             # create new page
-            self.pages.append(Page())
+            page = Page()
+            # write to new page
+            page.write(value)
+            # append the new page
+            self.pages.append(page)
             # update free page index to point to new blank page
             self.free_pages[index] = len(self.pages) - 1
             # self.free_pages[index].append(len(pages) - 1)
+
  
