@@ -7,6 +7,8 @@ import time
 # column-wise in the pages
 #record = Record(1, 906659671, [90, 83, 93])
 
+KEY_COLUMN = 5
+
 # Generate some dummy data
 data = []
 # SID->RID

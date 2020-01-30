@@ -37,8 +37,6 @@ class Page:
             return
         self.data[record_num * 8: record_num * 8 + 8] = value.to_bytes(8, "big")
 
-
-
     def write(self, value):
         if self.has_capacity():
             self.data += value.to_bytes(8, "big")
