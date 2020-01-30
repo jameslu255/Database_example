@@ -1,4 +1,4 @@
-from template.config import *
+#from template.config import *
 
 
 class Page:
@@ -15,7 +15,7 @@ class Page:
         Returns the given record number as bytes
         """
         # If out of bounds, return 0 bytes
-        if (record_num >= num_records or record_num < 0):
+        if (record_num >= self.num_records or record_num < 0):
             return bytes()
         return self.data[record_num * 8: record_num * 8 + 8]
 
@@ -24,9 +24,19 @@ class Page:
         Returns the given record number as int 
         """
         byteval = self.get_record_bytes(record_num)
-        if (byteVal == bytes()):
+        if (byteval == bytes()):
             return -1
         return int.from_bytes(byteval, "big")
+
+    def set_record(self, record_num, value):
+        # If out of bounds, return 0 bytes
+        if (record_num >= self.num_records or record_num < 0):
+            return
+        if self.data[record_num * 8: record_num * 8 + 8] != bytes(8):
+            print("Cannot set record")
+            return
+        self.data[record_num * 8: record_num * 8 + 8] = value.to_bytes(8, "big")
+
 
 
     def write(self, value):
