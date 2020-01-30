@@ -1,4 +1,4 @@
-from template.table import Table, Record
+from template.table import *
 from template.index import Index
 import time
 
@@ -31,10 +31,11 @@ class Query:
         rid = record.rid
         indirection = 0 # None
         
-        self.table.update_page(0, schema_encoding)
-        self.table.update_page(1, timestamp)
-        self.table.update_page(2, rid)
-        self.table.update_page(3, indirection)
+        # Write to the pagse
+        self.table.update_page(INDIRECTION_COLUMN, indirection)
+        self.table.update_page(RID_COLUMN, rid)
+        self.table.update_page(TIMESTAMP_COLUMN, timestamp)
+        self.table.update_page(SCHEMA_ENCODING_COLUMN, schema_encoding)
         
         # add each column's value to the respective page
         for x in range(len(record.columns)):
