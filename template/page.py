@@ -15,7 +15,7 @@ class Page:
         Returns the given record number as bytes
         """
         # If out of bounds, return 0 bytes
-        if (record_num >= num_records or record_num < 0):
+        if (record_num >= self.num_records or record_num < 0):
             return bytes()
         return self.data[record_num * 8: record_num * 8 + 8]
 
@@ -24,7 +24,7 @@ class Page:
         Returns the given record number as int 
         """
         byteval = self.get_record_bytes(record_num)
-        if (byteVal == bytes()):
+        if (byteval == bytes()):
             return -1
         return int.from_bytes(byteval, "big")
         
@@ -33,7 +33,7 @@ class Page:
         replace the byte at index with value
         used for updating indirection and schema
         """
-        if(index < 0 || index >= num_records):
+        if(index < 0 or index >= self.num_records):
             return bytes()
         self.data[index * 8: index * 8 + 8] = value.to_bytes(8, "big")
 

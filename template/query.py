@@ -31,10 +31,10 @@ class Query:
         rid = record.rid
         indirection = 0 # None
         
-        self.table.update_page(0, schema_encoding)
-        self.table.update_page(1, timestamp)
-        self.table.update_page(2, rid)
-        self.table.update_page(3, indirection)
+        self.table.update_page(3, schema_encoding)
+        self.table.update_page(2, timestamp)
+        self.table.update_page(1, rid)
+        self.table.update_page(0, indirection)
         
         # add each column's value to the respective page
         for x in range(len(record.columns)):
@@ -62,44 +62,109 @@ class Query:
     """
 
     def update(self, key, *columns):
+        print(key, columns)
+        # default values for the tail record
+        schema_encoding = '' #'0' * (self.table.num_columns + 4)
+        timestamp = int(time.time())
+        rid = self.table.tail_rid # rid of current tail page
+        rid_base = self.table.keys[key] # rid of base page with key
+        indirection = 0
+        
+        # If there are no tail pages (i.e. first update performed)
         # initiate new tail pages if tail page array empty
         if not self.table.pages_tail: #tail page list empty
             print("creating new tail pages")
+            tail_page_directory = []
             self.table.create_page_tail("indirection_t") #index 0
             self.table.create_page_tail("rid_t") #index 1
             self.table.create_page_tail("timestamp_t")#index 2
             self.table.create_page_tail("schema_t")#index 3
             for x in range(self.table.num_columns):
                 self.table.create_page_tail(x)
+            # Add the indices to the tail page directory
+            for x in range(len(columns) + 4):
+                tail_page_directory.append(self.table.free_pages_tail[x])
+            # update tail page directory
+            self.table.page_tail_directory[rid] = tail_page_directory
+        else: #already initialized tail pages
+            # check if a tail record was created for this key in this page 
+            # check indirection pointer of the rid in the base page
+            # get indirection value in base page
+            indirection_base_index = self.table.page_directory[rid_base][0]
+            indirection_base_page = self.table.pages[indirection_base_index]
+            indirection_value = indirection_base_page.get_record_int(rid_base)
+            indirection = indirection_value
+            if(indirection_value != 0): #not a 0 => values has been updated before
+                # check schema encoding to see if there's a previous tail page 
+                # get the latest tail pages
+                matching_tail_pages = self.table.page_tail_directory[indirection_value]
+
+                # Get the schema encoding page of the matching tail page
+                schema_tail_page_index = matching_tail_pages[3] # schema index
+                schema_tail_page = self.table.pages_tail[schema_tail_page_index]
+
+                # Get the schema encoding of the latest tail page
+                latest_schema = schema_tail_page.get_record_int(indirection_value)
                 
-        # tail page record info gathering
-        # get next available space in tail page = rid tail
-        rid_tail_index = self.table.free_pages_tail[2] #doesnt matter which column
-        rid_tail = self.table.pages_tail[rid_tail_index].records + 1
-        rid = self.table.keys[key]
-        schema_encoding = 0
-        timestamp = int(time.time())
-        indirection = 0 # point to self, use None?
-        record = Record(rid, columns[0], columns)
-        
-        # update the tail pages
-        self.table.update_page_tail(0, schema_encoding)
-        self.table.update_page_tail(1, timestamp)
-        self.table.update_page_tail(2, rid_tail)
-        self.table.update_page_tail(3, indirection)
-        
-        # add each column's value to the respective tail page
-        for x in range(len(record.columns)):
-            self.table.update_page_tail(x + 4, columns[x])
+                if latest_schema > 0: #there is at least one column that's updated
+                    # create tail pages for everyone
+                    print("creating new tail pages")
+                    tail_page_directory = []
+                    self.table.create_page_tail(0) #indirection
+                    self.table.create_page_tail(1) #rid 
+                    self.table.create_page_tail(2)#timestamp
+                    self.table.create_page_tail(3)#schema
+                    for x in range(self.table.num_columns):
+                        self.table.create_page_tail(x)
+                    # Add the indices to the tail page directory
+                    for x in range(len(columns) + 4):
+                        tail_page_directory.append(self.table.free_pages_tail[x])
+                    # update tail page directory
+                    # set map of RID -> tail page indexes
+                    self.table.page_tail_directory[rid] = tail_page_directory
+                    
             
-        # update base page indirection and schema encoding
-        self.table.update_base_indirection(rid, rid_tail)
-        # rid_tail_index = self.table.free_pages_tail[0] #doesnt matter which column
-        # rid_tail = self.table.pages_tail[rid_tail_index].records
-        # !!! replace value at rid of base page indrection
-        # base_indirection_index = self.table.free_pages[3]
-        # self.table.update_page(3, rid_tail)
+        # find schema encoding of the new tail record
+        # by comparing value of all the columns of this new tail record
+        # with the record in the base page
+        for x in range(4 + len(columns)):
+            # get base page val @ rid_base
+            base_page_index = self.table.page_directory[rid_base][x]
+            base_page = self.table.pages[base_page_index]
+            base_value= base_page.get_record_int(rid_base)
+            if x == 0: #indirection
+                schema_encoding += str(int(indirection == base_value))
+            elif x == 1: # rid
+                schema_encoding += str(int(rid == base_value))
+            elif x == 2: #timestamp 
+                schema_encoding += str(int(timestamp == base_value))
+            elif x == 3: #schema encoding, 0 on init
+                schema_encoding += str(int(0 == base_value))
+            else:
+                schema_encoding += str(int(columns[x - 4] != None))
+        schema_encoding = int(schema_encoding, 2)
+                
+        # write to the tail pages
+        tail_page_directory = []
+        self.table.update_page_tail(0, indirection)
+        self.table.update_page_tail(1, rid)
+        self.table.update_page_tail(2, timestamp)
+        self.table.update_page_tail(3, schema_encoding)
+        for x in range(len(columns)):
+            if columns[x] != None:
+                self.table.update_page_tail(x + 4, columns[x])
+        # Add the indices to the tail page directory
+        for x in range(len(columns) + 4):
+            tail_page_directory.append(self.table.free_pages_tail[x])
+        # update tail page directory
+        # set map of RID -> tail page indexes
+        self.table.page_tail_directory[rid] = tail_page_directory
+                    
+        # update base page indirection and schema encoding 
+        self.table.update_base_rid(0, rid_base, rid - 1) #indirection 
+        self.table.update_base_rid(3, rid_base, schema_encoding)
         
+        self.table.tail_rid += 1
         pass
 
     """
