@@ -68,13 +68,14 @@ class Query:
 
         # Find RID from key, keys = {SID: RID}
         rid = self.table.keys[key]
-        print(f"Found RID: {rid}\n")
+        print(f"Found RID: {rid}")
 
         # Find physical pages indices for RID from page_directory [RID:[x x x x x]]
-        # page_directory_indexes = self.table.page_directory[rid]
+        page_indices = self.table.page_directory[rid]
+        print(f"Found pages: {page_indices}\n")
 
         # Get desired columns
-        # Physical pages stored in pages
+
 
         pass
 
