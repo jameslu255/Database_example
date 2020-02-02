@@ -17,6 +17,7 @@ class Query:
     """
 
     def delete(self, key):
+        
         pass
 
     """
@@ -75,7 +76,6 @@ class Query:
         # If there are no tail pages (i.e. first update performed)
         # initiate new tail pages if tail page array empty
         if len(self.table.pages_tail) == 0: #tail page list empty
-            print("creating new tail pages on init")
             tail_page_directory = []
             self.table.create_page_tail("indirection_t") #index 0
             self.table.create_page_tail("rid_t") #index 1
@@ -94,7 +94,7 @@ class Query:
             # check indirection pointer of the rid in the base page
             
             # get indirection value in base page
-            indirection_base_index = self.table.page_directory[rid_base][0]
+            indirection_base_index = self.table.page_directory[rid_base][INDIRECTION_COLUMN]
             
             indirection_base_page = self.table.pages_base[indirection_base_index]
             indirection_value = indirection_base_page.get_record_int(rid_base)
@@ -106,7 +106,7 @@ class Query:
                 matching_tail_pages = self.table.tail_page_directory[indirection_value]
 
                 # Get the schema encoding page of the matching tail page
-                schema_tail_page_index = matching_tail_pages[3] # schema index
+                schema_tail_page_index = matching_tail_pages[SCHEMA_ENCODING_COLUMN] # schema index
                 schema_tail_page = self.table.pages_tail[schema_tail_page_index]
 
                 # Get the schema encoding of the latest tail page
@@ -134,7 +134,6 @@ class Query:
         # with the record in the base page
         for x in range(4 + len(columns)):
             # get base page val @ rid_base
-            print("on col: ", x)
             base_page_index = self.table.page_directory[rid_base][x]
             base_page = self.table.pages_base[base_page_index]
             base_value= base_page.get_record_int(rid_base)

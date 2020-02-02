@@ -45,7 +45,6 @@ update_cols = [
 ]
 
 update_time_0 = process_time()
-print(choice(keys))
 # query.update(906659671, None, None, None, None, 100)
 # query.update(906659671, None, None, None, 100, None)
 # query.update(906659671, None, None, None, None, 99)
