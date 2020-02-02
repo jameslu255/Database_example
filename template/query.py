@@ -23,7 +23,7 @@ class Query:
     # Insert a record with specified columns
     """
 
-    def insert(self, *columns):           
+    def insert(self, *columns):
         page_directory_indexes = []
         record = Record(self.table.records + 1, columns[0], columns)
         schema_encoding = 0 # '0' * self.table.num_columns
@@ -31,7 +31,7 @@ class Query:
         rid = record.rid
         indirection = 0 # None
         
-        # Write to the pagse
+        # Write to the page
         self.table.update_page(INDIRECTION_COLUMN, indirection)
         self.table.update_page(RID_COLUMN, rid)
         self.table.update_page(TIMESTAMP_COLUMN, timestamp)
@@ -56,6 +56,25 @@ class Query:
     """
 
     def select(self, key, query_columns):
+        # key = SID
+        # query_columns = columns we are interested in
+        # query.select(choice(keys), [1, 1, 1, 1, 1])
+        # 906659671 [1, 1, 1, 1, 1]
+        # SID = 906659671, columns wanted = key, g1, g2, g3, g4
+
+        print(f"Select: SID = {key} {query_columns}")
+        #print(f"query_columns: {query_columns}")
+
+        # Find RID from key, keys = {SID: RID}
+        rid = self.table.keys[key]
+        print(f"Found RID: {rid}\n")
+
+        # Find physical pages indices for RID from page_directory [RID:[x x x x x]]
+        # page_directory_indexes = self.table.page_directory[rid]
+
+        # Get desired columns
+        # Physical pages stored in pages
+
         pass
 
     """
