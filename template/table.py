@@ -25,6 +25,7 @@ class Table:
         self.name = name
         self.key = key
         self.num_columns = num_columns
+        
         # SID -> RID
         self.keys = {}
         # RID -> Page_base
@@ -45,31 +46,27 @@ class Table:
         self.tail_rid = 0
         
         # create pages for the indirection, rid, timestamp, schema encoding column
-        self.create_page("indirection") #index 0
-        self.create_page("rid") #index 1
-        self.create_page("timestamp")#index 2
-        self.create_page("schema")#index 3
+        self.create_base_page("indirection") #index 0
+        self.create_base_page("rid") #index 1
+        self.create_base_page("timestamp")#index 2
+        self.create_base_page("schema")#index 3
         
         # create pages for the key and the data columns
         for x in range(num_columns):
-            self.create_page(x)
-            # self.create_page_tail(x)
+            self.create_base_page(x)
         pass
 
     def __merge(self):
         pass
         
     def create_page_tail(self, col):
-        print("creating new tail page for " + str(col))
         # create the page and push to array holding pages
         self.pages_tail.append(Page())
         # keep track of index of page relative to aray index
         if(len(self.free_pages_tail) < self.num_columns + 4): #when initializing
             self.free_pages_tail.append(len(self.pages_tail) - 1)
         else: # when creating new page and need to update the index 
-            # print("before" , self.free_pages_tail)
             self.free_pages_tail[col] = len(self.pages_tail) - 1
-            print("after" , self.free_pages_tail)
         
     def update_page_tail(self, col, value):
         # update the page linked to the col
@@ -96,7 +93,7 @@ class Table:
         base_page_index = self.free_pages[column_index]
         self.pages_base[base_page_index].set_record(rid, value)
     
-    def create_page(self, col_name):
+    def create_base_page(self, col_name):
         print("creating new page for " + str(col_name))
         # create the page and push to array holding pages
         self.pages_base.append(Page())
@@ -104,7 +101,7 @@ class Table:
         self.free_pages.append(len(self.pages_base) - 1)
         # self.page_directory[col_name] = Page()
         
-    def update_page(self, index, value):
+    def update_base_page(self, index, value):
         # update the page linked to the index
         index_relative = self.free_pages[index]
         error = self.pages_base[index_relative].write(value)
