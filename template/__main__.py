@@ -11,17 +11,17 @@ keys = []
 
 # Measuring Insert Performance
 insert_time_0 = process_time()
-for i in range(0, 5):
+for i in range(0, 10):
     query.insert(906659671 + i, 93, 0, 0, 0)
     keys.append(906659671 + i)
 insert_time_1 = process_time()
 print("----------------base page-------------------------")
-print("0    1       2          3         4       5     6    7    8")
+print("         0          1          2          3          4          5          6          7          8")
 for x in range(grades_table.pages[0].num_records):
     for (page_num, page) in enumerate(grades_table.pages):
         byteval = page.data[x*8:(x*8 + 8)]
         val = int.from_bytes(byteval, "big")
-        print(val, end = '    ')
+        print("{0: 10d}".format(val), end = ' ')
     print()
         
 # for (page_num, page) in enumerate(grades_table.pages):
@@ -52,24 +52,25 @@ query.update(906659671, None, None, None, None, 99)
 # for i in range(0, 3):
     # query.update(choice(keys), *(choice(update_cols)))
 update_time_1 = process_time()
-print("----------------base page-------------------------")
-print("0    1       2          3         4       5     6    7    8")
+print("         0          1          2          3          4          5          6          7          8")
 for x in range(grades_table.pages[0].num_records):
     for (page_num, page) in enumerate(grades_table.pages):
         byteval = page.data[x*8:(x*8 + 8)]
         val = int.from_bytes(byteval, "big")
-        print(val, end = '    ')
+        print("{0: 10d}".format(val), end = ' ')
     print()
 
 print("----------------tail page-------------------------")
-print("0    1       2          3      4    5    6    7     8")
+print("         0          1          2          3          4          5          6          7          8")
 for x in range(grades_table.pages_tail[0].num_records):
     for (page_num, page) in enumerate(grades_table.pages_tail):
         byteval = page.data[x*8:(x*8 + 8)]
         val = int.from_bytes(byteval, "big")
-        print(val, end = '    ')
+        print("{0: 10d}".format(val), end = ' ')
     print()
-# # Check to see if pages contain the records
+    
+print(grades_table.page_tail_directory)
+    
 # # Loop through each base page
 # for (page_num, page) in enumerate(grades_table.pages_tail):
     # print(f"Tail PG: {page_num}" )
