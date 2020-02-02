@@ -1,5 +1,5 @@
-from template.table import *
-from template.index import Index
+from table import *
+from index import Index
 import time
 
 class Query:
