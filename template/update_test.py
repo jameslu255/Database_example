@@ -1,5 +1,5 @@
-from page import *
-from table import *
+from template.page import *
+from template.table import *
 from random import choice, randrange
 
 # Generate some dummy data

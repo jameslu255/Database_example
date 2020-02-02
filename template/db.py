@@ -1,4 +1,4 @@
-from table import Table
+from template.table import Table
 
 class Database():
 

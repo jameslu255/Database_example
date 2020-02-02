@@ -1,5 +1,5 @@
-from page import *
-from table import *
+from template.page import *
+from template.table import *
 from random import choice, randrange
 import time 
 # Create a record with RID=1, key=906659671, col=[90, 83, 93]
