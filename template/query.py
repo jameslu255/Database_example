@@ -74,7 +74,7 @@ class Query:
         page_indices = self.table.page_directory[rid]
         print(f"Found pages: {page_indices}")
 
-        # Get desired columns page indices
+        # Get desired columns' page indices
         for i in range(len(query_columns)):
             if query_columns[i] == 1:
                 page = page_indices[i+4]
