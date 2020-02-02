@@ -23,15 +23,17 @@ class Query:
     # Insert a record with specified columns
     """
 
-    def insert(self, *columns):           
+    def insert(self, *columns):
+        self.table.records += 1
+
         page_directory_indexes = []
-        record = Record(self.table.records + 1, columns[0], columns)
+        record = Record(self.table.records, columns[0], columns)
         schema_encoding = 0 # '0' * self.table.num_columns
         timestamp = int(time.time())
         rid = record.rid
         indirection = 0 # None
         
-        # Write to the pagse
+        # Write to the page
         self.table.update_page(INDIRECTION_COLUMN, indirection)
         self.table.update_page(RID_COLUMN, rid)
         self.table.update_page(TIMESTAMP_COLUMN, timestamp)
@@ -48,7 +50,6 @@ class Query:
             page_directory_indexes.append(self.table.free_pages[x])
         self.table.page_directory[self.table.records] = page_directory_indexes
         # [self.table.free_pages[i] for i in range(record.columns) + 4]
-        self.table.records += 1
         pass
 
     """
@@ -56,6 +57,31 @@ class Query:
     """
 
     def select(self, key, query_columns):
+        # key = SID
+        # query_columns = columns we are interested in
+        # query.select(choice(keys), [1, 1, 1, 1, 1])
+        # 906659671 [1, 1, 1, 1, 1]
+        # SID = 906659671, columns wanted = key, g1, g2, g3, g4
+
+        print(f"Select: SID = {key} {query_columns}")
+        #print(f"query_columns: {query_columns}")
+
+        # Find RID from key, keys = {SID: RID}
+        rid = self.table.keys[key]
+        print(f"Found RID: {rid}")
+
+        # Find physical pages' indices for RID from page_directory [RID:[x x x x x]]
+        page_indices = self.table.page_directory[rid]
+        print(f"Found pages: {page_indices}")
+
+        # Get desired columns' page indices
+        for i in range(len(query_columns)):
+            if query_columns[i] == 1:
+                page = page_indices[i+4]
+                print(f"Column {i+4} -> Page: {page}")
+        print(f"\n")
+
+        # Return set of columns from the record
         pass
 
     """
