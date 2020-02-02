@@ -1,5 +1,5 @@
-from template.db import Database
-from template.query import Query
+from db import Database
+from query import Query
 from time import process_time
 from random import choice, randrange
 
@@ -42,7 +42,7 @@ print("Updating 10k records took:  \t\t\t", update_time_1 - update_time_0)
 
 # Measuring Select Performance
 select_time_0 = process_time()
-for i in range(0, 10000):
+for i in range(0, 10):
     query.select(choice(keys), [1, 1, 1, 1, 1])
 select_time_1 = process_time()
 print("Selecting 10k records took:  \t\t\t", select_time_1 - select_time_0)
