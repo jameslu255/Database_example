@@ -24,8 +24,10 @@ class Query:
     """
 
     def insert(self, *columns):
+        self.table.records += 1
+
         page_directory_indexes = []
-        record = Record(self.table.records + 1, columns[0], columns)
+        record = Record(self.table.records, columns[0], columns)
         schema_encoding = 0 # '0' * self.table.num_columns
         timestamp = int(time.time())
         rid = record.rid
@@ -48,7 +50,6 @@ class Query:
             page_directory_indexes.append(self.table.free_pages[x])
         self.table.page_directory[self.table.records] = page_directory_indexes
         # [self.table.free_pages[i] for i in range(record.columns) + 4]
-        self.table.records += 1
         pass
 
     """
