@@ -70,12 +70,18 @@ class Query:
         rid = self.table.keys[key]
         print(f"Found RID: {rid}")
 
-        # Find physical pages indices for RID from page_directory [RID:[x x x x x]]
+        # Find physical pages' indices for RID from page_directory [RID:[x x x x x]]
         page_indices = self.table.page_directory[rid]
-        print(f"Found pages: {page_indices}\n")
+        print(f"Found pages: {page_indices}")
 
-        # Get desired columns
+        # Get desired columns page indices
+        for i in range(len(query_columns)):
+            if query_columns[i] == 1:
+                page = page_indices[i+4]
+                print(f"Column {i+4} -> Page: {page}")
+        print(f"\n")
 
+        # Return records?
 
         pass
 
