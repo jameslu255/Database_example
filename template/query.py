@@ -75,13 +75,19 @@ class Query:
         print(f"Found pages: {page_indices}")
 
         # Get desired columns' page indices
+        columns = []
         for i in range(len(query_columns)):
             if query_columns[i] == 1:
-                page = page_indices[i+4]
-                print(f"Column {i+4} -> Page: {page}")
-        print(f"\n")
+                page_index = page_indices[i+4]
+                page = self.table.pages[page_index]
+                # Get record data from row rid-1 (RIDs start at 1)
+                data = page.get_record_int(rid-1)
+                columns.append(data)
+                print(f"Column {i+4} -> Page Index: {page_index} -> Data: {data}")
 
         # Return set of columns from the record
+        print(f"Return columns: {columns}\n")
+        return columns
         pass
 
     """
