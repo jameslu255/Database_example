@@ -81,8 +81,7 @@ class Query:
                 print(f"Column {i+4} -> Page: {page}")
         print(f"\n")
 
-        # Return records?
-
+        # Return set of columns from the record
         pass
 
     """
