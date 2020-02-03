@@ -20,7 +20,7 @@ keys = []
 # Measuring Insert Performance
 insert_time_0 = process_time()
 for i in range(0, 10):
-    query.insert(906659671 + i, 93, 0, 0, 0)
+    query.insert(906659671 + i, 93, 30, 50, 70)
     keys.append(906659671 + i)
 insert_time_1 = process_time()
 print("----------------base page-------------------------")
@@ -99,8 +99,8 @@ print("Selecting 10k records took:  \t\t\t", select_time_1 - select_time_0)
 
 # Measuring Aggregate Performance
 agg_time_0 = process_time()
-for i in range(0, 10000, 100):
-    result = query.sum(i, 100, randrange(0, 5))
+#for i in range(0, 10000, 100):
+result = query.sum(1, 10, 3)
 agg_time_1 = process_time()
 print("Aggregate 10k of 100 record batch took:\t", agg_time_1 - agg_time_0)
 
@@ -111,5 +111,5 @@ for i in range(0, 10000):
 delete_time_1 = process_time()
 print("Deleting 10k records took:  \t\t\t", delete_time_1 - delete_time_0)
 
-Index.print_trees(Index)
-Index.locate(Index, 90, 93, 0)
+#Index.print_trees(Index)
+#Index.locate(Index, 90, 93, 0)

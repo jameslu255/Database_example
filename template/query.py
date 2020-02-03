@@ -25,32 +25,32 @@ class Query:
     """
 
     def insert(self, *columns):
-        self.table.records += 1
+        self.table.base_rid += 1
         page_directory_indexes = []
-        record = Record(self.table.records, columns[0], columns)
+        record = Record(self.table.base_rid, columns[0], columns)
         schema_encoding = 0 # '0' * self.table.num_columns
         timestamp = int(time.time())
         rid = record.rid
         indirection = 0 # None
         # Write to the page
-        self.table.update_page(INDIRECTION_COLUMN, indirection)
-        self.table.update_page(RID_COLUMN, rid)
-        self.table.update_page(TIMESTAMP_COLUMN, timestamp)
-        self.table.update_page(SCHEMA_ENCODING_COLUMN, schema_encoding)
+        self.table.update_base_page(INDIRECTION_COLUMN, indirection)
+        self.table.update_base_page(RID_COLUMN, rid)
+        self.table.update_base_page(TIMESTAMP_COLUMN, timestamp)
+        self.table.update_base_page(SCHEMA_ENCODING_COLUMN, schema_encoding)
         # add each column's value to the respective page
         for x in range(len(record.columns)):
-            self.table.update_page(x + 4, columns[x])
+            self.table.update_base_page(x + 4, columns[x])
             # Ignores 0 because columns[0] is just the student id.
             if x != 0:
                 #subtract 1 from x because we want to start with assignment 1
                 Index.add_values(self,x - 1, rid, columns[x])
         
         # SID -> RID
-        self.table.keys[record.key] = self.table.records
+        self.table.keys[record.key] = self.table.base_rid
         # RID -> page_index
         for x in range(len(record.columns) + 4):
             page_directory_indexes.append(self.table.free_pages[x])
-        self.table.page_directory[self.table.records] = page_directory_indexes
+        self.table.page_directory[self.table.base_rid] = page_directory_indexes
         # [self.table.free_pages[i] for i in range(record.columns) + 4]
         pass
 
@@ -81,7 +81,7 @@ class Query:
         for i in range(len(query_columns)):
             if query_columns[i] == 1:
                 page_index = page_indices[i+4]
-                page = self.table.pages[page_index]
+                page = self.table.pages_base[page_index]
                 # Get record data from row rid-1 (RIDs start at 1)
                 data = page.get_record_int(rid-1)
                 columns.append(data)
@@ -211,4 +211,9 @@ class Query:
     """
 
     def sum(self, start_range, end_range, aggregate_column_index):
+        sum = 0;
+        for i in range(start_range, end_range + 1):
+            sum += Index.get_value(self, aggregate_column_index, i)
+        print(sum)
+        return sum
         pass

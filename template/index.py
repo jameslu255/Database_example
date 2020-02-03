@@ -28,6 +28,12 @@ class Index:
                 print("Student: " + str(pair[0]) + ", Score: " + str(pair[1]))
             #print(list(btree_list[i].values()))
 
+    def get_value(self, assignment_num, key):
+        if (key > 0 and key <= self.table.base_rid):
+            return btree_list[assignment_num].get(key, -1)
+        else:
+            return 0
+
     """
     # returns the location of all records with the given value
     # takes in a range of scores and an assignment and returns all RID's and their respective scores
