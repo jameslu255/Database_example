@@ -17,14 +17,14 @@ for i in range(0, 10):
 insert_time_1 = process_time()
 print("----------------base page-------------------------")
 print("         0          1          2          3          4          5          6          7          8")
-for x in range(grades_table.pages_base[0].num_records):
-    for (page_num, page) in enumerate(grades_table.pages_base):
+for x in range(grades_table.base_pages[0].num_records):
+    for (page_num, page) in enumerate(grades_table.base_pages):
         byteval = page.data[x*8:(x*8 + 8)]
         val = int.from_bytes(byteval, "big")
         print("{0: 10d}".format(val), end = ' ')
     print()
         
-# for (page_num, page) in enumerate(grades_table.pages_base):
+# for (page_num, page) in enumerate(grades_table.base_pages):
     # print(f"base_page_col: {page_num}" )
     # # Loop through the page's data
     # # Data starts at 4
@@ -45,15 +45,15 @@ update_cols = [
 ]
 
 update_time_0 = process_time()
-# query.update(906659671, None, None, None, None, 100)
-# query.update(906659671, None, None, None, 100, None)
-# query.update(906659671, None, None, None, None, 99)
-for i in range(0, 100):
-    query.update(choice(keys), *(choice(update_cols)))
+query.update(906659671, None, None, None, None, 100)
+query.update(906659671, None, None, None, None, 85)
+query.update(906659671, None, None, None, None, 99)
+# for i in range(0, 3):
+    # query.update(choice(keys), *(choice(update_cols)))
 update_time_1 = process_time()
 print("         0          1          2          3          4          5          6          7          8")
-for x in range(grades_table.pages_base[0].num_records):
-    for (page_num, page) in enumerate(grades_table.pages_base):
+for x in range(grades_table.base_pages[0].num_records):
+    for (page_num, page) in enumerate(grades_table.base_pages):
         byteval = page.data[x*8:(x*8 + 8)]
         val = int.from_bytes(byteval, "big")
         print("{0: 10d}".format(val), end = ' ')
@@ -61,8 +61,8 @@ for x in range(grades_table.pages_base[0].num_records):
 
 print("----------------tail page-------------------------")
 print("         0          1          2          3          4          5          6          7          8")
-# for x in range(grades_table.pages_tail[0].num_records):
-    # for (page_num, page) in enumerate(grades_table.pages_tail):
+# for x in range(grades_table.tail_pages[0].num_records):
+    # for (page_num, page) in enumerate(grades_table.tail_pages):
         # byteval = page.data[x*8:(x*8 + 8)]
         # val = int.from_bytes(byteval, "big")
         # print("{0: 10d}".format(val), end = ' ')
@@ -71,7 +71,7 @@ print("         0          1          2          3          4          5        
 print(grades_table.tail_page_directory)
     
 # # Loop through each base page
-for (page_num, page) in enumerate(grades_table.pages_tail):
+for (page_num, page) in enumerate(grades_table.tail_pages):
     print(f"Tail PG: {page_num}" )
     # Loop through the page's data
     # Data starts at 4
@@ -98,7 +98,26 @@ print("Aggregate 10k of 100 record batch took:\t", agg_time_1 - agg_time_0)
 
 # Measuring Delete Performance
 delete_time_0 = process_time()
-for i in range(0, 10000):
-    query.delete(906659671 + i)
+query.delete(906659671)
+# for i in range(0, 10000):
+    # query.delete(906659671 + i)
 delete_time_1 = process_time()
+
+print("         0          1          2          3          4          5          6          7          8")
+for x in range(grades_table.base_pages[0].num_records):
+    for (page_num, page) in enumerate(grades_table.base_pages):
+        byteval = page.data[x*8:(x*8 + 8)]
+        val = int.from_bytes(byteval, "big")
+        print("{0: 10d}".format(val), end = ' ')
+    print()
+    
+# # Loop through each base page
+for (page_num, page) in enumerate(grades_table.tail_pages):
+    print(f"Tail PG: {page_num}" )
+    # Loop through the page's data
+    # Data starts at 4
+    for i in range(0, 10):
+        byteval = page.data[i*8:(i*8 + 8)]
+        val = int.from_bytes(byteval, "big")
+        print(f"Val: {val}")
 print("Deleting 10k records took:  \t\t\t", delete_time_1 - delete_time_0)

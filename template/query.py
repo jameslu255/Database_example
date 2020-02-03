@@ -17,7 +17,36 @@ class Query:
     """
 
     def delete(self, key):
+        print("removing ", key)
+        # get base rid
+        base_rid = self.table.keys[key] 
         
+        # set rid to invalid value - 0
+        self.table.update_base_rid(RID_COLUMN, base_rid, 0)
+        
+        # check if there are tail pages to invalidate as well
+        # get indirection value of the base page 
+        indirection_index = self.table.base_page_directory[base_rid][INDIRECTION_COLUMN]
+        indirection_page = self.table.base_pages[indirection_index]
+        indirection_value = indirection_page.get_record_int(base_rid)
+        
+        # index arithmetic to find the latest tail page and its predecessors
+        rid_index = self.table.tail_page_directory[indirection_value][RID_COLUMN][0] # index part of tuple
+        
+        while(indirection_value != 0): # there are update(s) to this rid 
+            # set tail rid to invalid 0 of the tail record
+            rid_offset = self.table.tail_page_directory[indirection_value][RID_COLUMN][1] # offset
+            self.table.update_tail_rid(rid_index, rid_offset, 0)
+            
+            # print(indirection_column_index)
+            # get the tail record indirection value 
+            indirection_index = self.table.tail_page_directory[indirection_value][INDIRECTION_COLUMN][0] # index
+            indirection_offset = self.table.tail_page_directory[indirection_value][INDIRECTION_COLUMN][1] # offset
+            indirection_page = self.table.tail_pages[indirection_index]
+            indirection_value = indirection_page.get_record_int(indirection_offset)
+            
+            # update index to find the previous page for this column
+            rid_index -= (4 + self.table.num_columns)
         pass
 
     """
@@ -48,8 +77,8 @@ class Query:
         self.table.keys[record.key] = self.table.base_rid
         # RID -> page_index
         for x in range(len(record.columns) + 4):
-            page_directory_indexes.append(self.table.free_pages[x])
-        self.table.page_directory[self.table.base_rid] = page_directory_indexes
+            page_directory_indexes.append(self.table.free_base_pages[x])
+        self.table.base_page_directory[self.table.base_rid] = page_directory_indexes
         pass
 
     """
@@ -75,17 +104,20 @@ class Query:
         
         # If there are no tail pages (i.e. first update performed)
         # initiate new tail pages if tail page array empty
-        if len(self.table.pages_tail) == 0: #tail page list empty
+        if len(self.table.tail_pages) == 0: #tail page list empty
             tail_page_directory = []
-            self.table.create_page_tail("indirection_t") #index 0
-            self.table.create_page_tail("rid_t") #index 1
-            self.table.create_page_tail("timestamp_t")#index 2
-            self.table.create_page_tail("schema_t")#index 3
+            self.table.create_tail_page("indirection_t") #index 0
+            self.table.create_tail_page("rid_t") #index 1
+            self.table.create_tail_page("timestamp_t")#index 2
+            self.table.create_tail_page("schema_t")#index 3
             for x in range(self.table.num_columns):
-                self.table.create_page_tail(x)
+                self.table.create_tail_page(x)
             # Add the indices to the tail page directory
             for x in range(len(columns) + 4):
-                tail_page_directory.append(self.table.free_pages_tail[x])
+                page_index = self.table.free_tail_pages[x]
+                page = self.table.tail_pages[page_index]
+                tail_page_directory.append((page_index, page.num_records))
+                # tail_page_directory.append(self.table.free_tail_pages[x])
             # update tail page directory
             self.table.tail_page_directory[rid] = tail_page_directory
             
@@ -94,9 +126,9 @@ class Query:
             # check indirection pointer of the rid in the base page
             
             # get indirection value in base page
-            indirection_base_index = self.table.page_directory[rid_base][INDIRECTION_COLUMN]
+            indirection_base_index = self.table.base_page_directory[rid_base][INDIRECTION_COLUMN]
             
-            indirection_base_page = self.table.pages_base[indirection_base_index]
+            indirection_base_page = self.table.base_pages[indirection_base_index]
             indirection_value = indirection_base_page.get_record_int(rid_base)
             indirection = indirection_value
 
@@ -106,24 +138,28 @@ class Query:
                 matching_tail_pages = self.table.tail_page_directory[indirection_value]
 
                 # Get the schema encoding page of the matching tail page
-                schema_tail_page_index = matching_tail_pages[SCHEMA_ENCODING_COLUMN] # schema index
-                schema_tail_page = self.table.pages_tail[schema_tail_page_index]
-
+                schema_tail_page_index = matching_tail_pages[SCHEMA_ENCODING_COLUMN][0] # 0 for index | 1 for offset
+                offset = matching_tail_pages[SCHEMA_ENCODING_COLUMN][1]
+                schema_tail_page = self.table.tail_pages[schema_tail_page_index]
+                print("indirection value: ", indirection_value)
                 # Get the schema encoding of the latest tail page
-                latest_schema = schema_tail_page.get_record_int(indirection_value)
-
+                latest_schema = schema_tail_page.get_record_int(offset)
+                print("latest_schema: ", latest_schema)
                 if latest_schema > 0: #there is at least one column that's updated
                     # create tail pages for everyone
                     tail_page_directory = []
-                    self.table.create_page_tail(INDIRECTION_COLUMN)
-                    self.table.create_page_tail(RID_COLUMN) 
-                    self.table.create_page_tail(TIMESTAMP_COLUMN)
-                    self.table.create_page_tail(SCHEMA_ENCODING_COLUMN)
+                    self.table.create_tail_page(INDIRECTION_COLUMN)
+                    self.table.create_tail_page(RID_COLUMN) 
+                    self.table.create_tail_page(TIMESTAMP_COLUMN)
+                    self.table.create_tail_page(SCHEMA_ENCODING_COLUMN)
                     for x in range(self.table.num_columns):
-                        self.table.create_page_tail(x + 4)
+                        self.table.create_tail_page(x + 4)
                     # Add the indices to the tail page directory
                     for x in range(len(columns) + 4):
-                        tail_page_directory.append(self.table.free_pages_tail[x])
+                        page_index = self.table.free_tail_pages[x]
+                        page = self.table.tail_pages[page_index]
+                        tail_page_directory.append((page_index, page.num_records))
+                        # tail_page_directory.append(self.table.free_tail_pages[x])
                     # update tail page directory
                     # set map of RID -> tail page indexes
                     self.table.tail_page_directory[rid] = tail_page_directory
@@ -134,8 +170,8 @@ class Query:
         # with the record in the base page
         for x in range(4 + len(columns)):
             # get base page val @ rid_base
-            base_page_index = self.table.page_directory[rid_base][x]
-            base_page = self.table.pages_base[base_page_index]
+            base_page_index = self.table.base_page_directory[rid_base][x]
+            base_page = self.table.base_pages[base_page_index]
             base_value= base_page.get_record_int(rid_base)
             if x == INDIRECTION_COLUMN:
                 schema_encoding += str(int(indirection == base_value))
@@ -151,16 +187,18 @@ class Query:
 
         # write to the tail pages
         tail_page_directory = []
-        self.table.update_page_tail(INDIRECTION_COLUMN, indirection)
-        self.table.update_page_tail(RID_COLUMN, rid)
-        self.table.update_page_tail(TIMESTAMP_COLUMN, timestamp)
-        self.table.update_page_tail(SCHEMA_ENCODING_COLUMN, schema_encoding)
+        self.table.update_tail_page(INDIRECTION_COLUMN, indirection)
+        self.table.update_tail_page(RID_COLUMN, rid)
+        self.table.update_tail_page(TIMESTAMP_COLUMN, timestamp)
+        self.table.update_tail_page(SCHEMA_ENCODING_COLUMN, schema_encoding)
         for x in range(len(columns)):
             if columns[x] != None:
-                self.table.update_page_tail(x + 4, columns[x])
+                self.table.update_tail_page(x + 4, columns[x])
         # Add the indices to the tail page directory
         for x in range(len(columns) + 4):
-            tail_page_directory.append(self.table.free_pages_tail[x])
+            page_index = self.table.free_tail_pages[x]
+            page = self.table.tail_pages[page_index]
+            tail_page_directory.append((page_index, page.num_records))
         # update tail page directory
         # set map of RID -> tail page indexes
         self.table.tail_page_directory[rid] = tail_page_directory
