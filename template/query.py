@@ -9,6 +9,7 @@ class Query:
 
     def __init__(self, table):
         self.table = table
+        Index(self.table)
         pass
 
     """
@@ -25,23 +26,24 @@ class Query:
 
     def insert(self, *columns):
         self.table.records += 1
-
         page_directory_indexes = []
         record = Record(self.table.records, columns[0], columns)
         schema_encoding = 0 # '0' * self.table.num_columns
         timestamp = int(time.time())
         rid = record.rid
         indirection = 0 # None
-        
         # Write to the page
         self.table.update_page(INDIRECTION_COLUMN, indirection)
         self.table.update_page(RID_COLUMN, rid)
         self.table.update_page(TIMESTAMP_COLUMN, timestamp)
         self.table.update_page(SCHEMA_ENCODING_COLUMN, schema_encoding)
-        
         # add each column's value to the respective page
         for x in range(len(record.columns)):
             self.table.update_page(x + 4, columns[x])
+            # Ignores 0 because columns[0] is just the student id.
+            if x != 0:
+                #subtract 1 from x because we want to start with assignment 1
+                Index.add_values(self,x - 1, rid, columns[x])
         
         # SID -> RID
         self.table.keys[record.key] = self.table.records

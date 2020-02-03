@@ -1,7 +1,15 @@
 from template.db import Database
 from template.query import Query
+from template.index import Index
 from time import process_time
 from random import choice, randrange
+import sys
+
+try:
+    import BTrees
+except ImportError:
+    print("BTrees are required to run script. Try using 'pip install BTrees' in cmd line.")
+    sys.exit()
 
 # Student Id and 4 grades
 db = Database()
@@ -60,3 +68,6 @@ for i in range(0, 10000):
     query.delete(906659671 + i)
 delete_time_1 = process_time()
 print("Deleting 10k records took:  \t\t\t", delete_time_1 - delete_time_0)
+
+Index.print_trees(Index)
+Index.locate(Index, 90, 93, 0)
