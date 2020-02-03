@@ -12,4 +12,4 @@ class Range:
         self.base_pages = []
         self.tail_rid = 1
         self.base_rid = 1
-
+    
