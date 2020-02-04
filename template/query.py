@@ -214,9 +214,9 @@ class Query:
     """
 
     def sum(self, start_range, end_range, aggregate_column_index):
-        """sum = 0;
+        sum = 0;
         for i in range(start_range, end_range + 1):
             sum += Index.get_value(self, aggregate_column_index, i)
         print(sum)
-        return sum """
+        return sum
         pass
