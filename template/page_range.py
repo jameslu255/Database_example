@@ -12,11 +12,12 @@ class PageRange:
         self.end_rid_base = 0
         self.start_rid_tail = 0  # first starting RID of tail in this page range (0 for null value since rid start at 1)
         self.end_rid_tail = 0
-        self.max_capacity = 4 + num_cols       # want to hold num_cols and plus 4 default columns
+        self.max_capacity = (4 + num_cols)       # want to hold num_cols and plus 4 default columns
         self.free_base_pages = []
         self.free_tail_pages = []
 
     # check if our page range still has space to add more pages
     def page_range_has_capacity(self):
         # use 16 for now number changes depending on how many max pages we want to store
-        return (self.max_capacity - self.num_base_pages) > 0
+        print("checking capacity, cur at ", self.num_base_pages)
+        return (self.max_capacity - self.num_base_pages) >= 0

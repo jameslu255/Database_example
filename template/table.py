@@ -66,7 +66,7 @@ class Table:
         # get the base_page that's getting updated rid (passed in as base_rid)
         # find the page range that base_page is in
         # add the tail page to that page range
-        pr_id = (base_rid // 512)  # given the base_rid we can find the page range we want
+        pr_id = (base_rid // (512 + 1))  # given the base_rid we can find the page range we want
         cur_pr = self.page_ranges[pr_id]
 
         # create the page and push to array holding pages
@@ -85,7 +85,7 @@ class Table:
         cur_pr.num_tail_pages += 1
 
     def update_tail_page(self, col, value, base_rid):
-        pr_id = base_rid // 512  # given the base_rid we can find the page range we want
+        pr_id = base_rid // (512 + 1)  # given the base_rid we can find the page range we want
         # update the page linked to the col
         print(str(col) + " writing val: " + str(value) + " of type " + str(type(value)))
         cur_pr = self.page_ranges[pr_id]
@@ -115,7 +115,7 @@ class Table:
         cur_pr.end_rid_tail = self.tail_rid
 
     def update_tail_rid(self, column_index, rid, value, base_rid):
-        pr_id = base_rid // 512
+        pr_id = base_rid // (512 + 1)
         cur_pr = self.page_ranges[pr_id]
         if (column_index < 0 or column_index > self.num_columns):
             print("updating a rid in base " + str(column_index) + " out of bounds")
@@ -123,7 +123,7 @@ class Table:
         cur_pr.tail_pages[column_index].set_record(rid, value)
 
     def update_base_rid(self, column_index, rid, value):
-        pr_id = rid // 512
+        pr_id = rid // (512 + 1)
         cur_pr = self.page_ranges[pr_id]
         if (column_index < 0 or column_index > self.num_columns):
             print("updating a rid in base " + str(column_index) + " out of bounds")
@@ -144,31 +144,44 @@ class Table:
         cur_pr.free_base_pages.append(len(cur_pr.base_pages) - 1)
 
     def update_base_page(self, index, value, rid):
+        print("updating col", index, "with", value, "for rid", rid)
         # update the page linked to the index
-        pr_id = rid // 512
+        pr_id = rid // (512 + 1)
         # index_relative = self.free_base_pages[index]
         print("pr_id", pr_id)
+        
+        if pr_id >= len(self.page_ranges): #no new page range
+            # make new page range
+            print("making new pange range")
+            self.cur_page_range_id += 1  # this pr is full - update the pr id
+            new_pr = PageRange(self.cur_page_range_id, self.num_columns)
+            self.page_ranges.append(new_pr)  # add this new pr with new id to the PR list
+            # initialize base pages on new pange range creation
+            for x in range(self.num_columns + 4):
+                self.create_base_page(x)
+            
         pr = self.page_ranges[pr_id]
-        print("free pafge", pr.free_base_pages)
+        print("number of base pages", pr.num_base_pages)
+        # print("free pafge", pr.free_base_pages)
         index_relative = pr.free_base_pages[index]
-        print("index_relative", index_relative)
+        # print("index_relative", index_relative)
         error = pr.base_pages[index_relative].write(value)
         # error = self.base_pages[index_relative].write(value)
         if error == -1:  # maximum size reached in page
-            print("col:" + str(index) + " in page " + str(index_relative) + " is full, making a new one")
+            print("col:" + str(index) + " in page " + str(index_relative) + " is full, making a new one", rid)
             # similar to above check if we have space in page range/create if necessary/update
             # self.create_new_pr_if_necessary()
-
             # create new page
             page = Page()
 
-            # add new page to pr's base page list
-            self.append_base_page_to_pr(page)
-
+            # self.append_base_page_to_pr(page)
             # also add page to the list of base pages in pr
             page.write(value)
             pr.base_pages.append(page)
-            pr.free_base_pages.append(len(self.base_pages) - 1)
+            pr.free_base_pages.append(len(pr.base_pages) - 1)
+            
+            # increment the num pages count in either case (full or not full since we are adding a new page)
+            pr.num_base_pages += 1
 
         # print("current page range: " + str(cur_pr_id_num))
         if pr.start_rid_base == 0:

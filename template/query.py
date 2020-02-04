@@ -23,7 +23,7 @@ class Query:
         
         # grab current page range 
         # pr_id = rid_base // (max_page_size / 8)
-        pr_id = base_rid // 512
+        pr_id = base_rid // (512 + 1)
         cur_pr = self.table.page_ranges[pr_id]
         
         # set rid to invalid value - 0
@@ -69,11 +69,6 @@ class Query:
         rid = record.rid
         indirection = 0 # None
         
-        # grab current page range 
-        # pr_id = rid_base // (max_page_size / 8)
-        pr_id = rid // 512
-        cur_pr = self.table.page_ranges[pr_id]
-        
         # Write to the page
         self.table.update_base_page(INDIRECTION_COLUMN, indirection, rid)
         self.table.update_base_page(RID_COLUMN, rid, rid)
@@ -83,6 +78,12 @@ class Query:
         # add each column's value to the respective page
         for x in range(len(record.columns)):
             self.table.update_base_page(x + 4, columns[x], rid)
+        
+        # grab current page range 
+        # pr_id = rid_base // (max_page_size / 8)
+        pr_id = rid // (512 + 1)
+        # print("pr_id", pr_id)
+        cur_pr = self.table.page_ranges[pr_id]
         
         # SID -> RID
         self.table.keys[record.key] = self.table.base_rid
@@ -116,7 +117,7 @@ class Query:
         
         # grab current page range 
         # pr_id = rid_base // (max_page_size / 8)
-        pr_id = rid_base // 512
+        pr_id = rid_base // (512 + 1)
         cur_pr = self.table.page_ranges[pr_id]
         
         # If there are no tail pages (i.e. first update performed)
@@ -161,10 +162,10 @@ class Query:
                 offset = matching_tail_pages[SCHEMA_ENCODING_COLUMN][1]
                 # schema_tail_page = self.table.tail_pages[schema_tail_page_index]
                 schema_tail_page = cur_pr.tail_pages[schema_tail_page_index]
-                print("indirection value: ", indirection_value)
+                # print("indirection value: ", indirection_value)
                 # Get the schema encoding of the latest tail page
                 latest_schema = schema_tail_page.get_record_int(offset)
-                print("latest_schema: ", latest_schema)
+                # print("latest_schema: ", latest_schema)
                 if latest_schema > 0: #there is at least one column that's updated
                     # create tail pages for everyone
                     tail_page_directory = []
