@@ -7,7 +7,6 @@ class Page:
     def __init__(self):
         self.num_records = 0
         self.data = bytearray()
-        #self.pr_id = None
 
     def has_capacity(self):
         return (4096 - 8 * self.num_records) > 0
