@@ -43,7 +43,10 @@ class Query:
             # Ignores 0 because columns[0] is just the student id.
             if x != 0:
                 #subtract 1 from x because we want to start with assignment 1
-                Index.add_values(self,x - 1, rid, columns[x])
+                Index.add_values(self, x, rid, columns[x])
+            else:
+                Index.create_dictionary(self, x, columns[x], rid)
+
         
         # SID -> RID
         self.table.keys[record.key] = self.table.base_rid
@@ -211,9 +214,9 @@ class Query:
     """
 
     def sum(self, start_range, end_range, aggregate_column_index):
-        sum = 0;
+        """sum = 0;
         for i in range(start_range, end_range + 1):
             sum += Index.get_value(self, aggregate_column_index, i)
         print(sum)
-        return sum
+        return sum """
         pass
