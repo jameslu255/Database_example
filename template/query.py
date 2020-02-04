@@ -106,37 +106,6 @@ class Query:
     """
 
     def select(self, key, query_columns):
-        # key = SID
-        # query_columns = columns we are interested in
-        # query.select(choice(keys), [1, 1, 1, 1, 1])
-        # 906659671 [1, 1, 1, 1, 1]
-        # SID = 906659671, columns wanted = key, g1, g2, g3, g4
-
-        print(f"Select: SID = {key} {query_columns}")
-        #print(f"query_columns: {query_columns}")
-
-        # Find RID from key, keys = {SID: RID}
-        rid = self.table.keys[key]
-        print(f"Found RID: {rid}")
-
-        # Find physical pages' indices for RID from page_directory [RID:[x x x x x]]
-        page_indices = self.table.page_directory[rid]
-        print(f"Found pages: {page_indices}")
-
-        # Get desired columns' page indices
-        columns = []
-        for i in range(len(query_columns)):
-            if query_columns[i] == 1:
-                page_index = page_indices[i+4]
-                page = self.table.pages_base[page_index]
-                # Get record data from row rid-1 (RIDs start at 1)
-                data = page.get_record_int(rid-1)
-                columns.append(data)
-                print(f"Column {i+4} -> Page Index: {page_index} -> Data: {data}")
-
-        # Return set of columns from the record
-        print(f"Return columns: {columns}\n")
-        return columns
         pass
 
     """
@@ -280,9 +249,11 @@ class Query:
     """
 
     def sum(self, start_range, end_range, aggregate_column_index):
+        """
         sum = 0;
         for i in range(start_range, end_range + 1):
             sum += Index.get_value(self, aggregate_column_index, i)
         print(sum)
         return sum
+        """
         pass
