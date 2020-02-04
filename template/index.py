@@ -33,8 +33,8 @@ class Index:
                 print("Assignment " + str(i))
                 for pair in (btree_list[i].iteritems()):
                     print("RID: " + str(pair[0]) + ", Score: " + str(pair[1]))
-        print(btree_list[0].get(906659672))
-        print(Index.locate(self, 20, 93, 2))
+        print("Student with ID 906659672 has RID: " + str(btree_list[0].get(906659672)))
+        print("All RID's with value between 20 and 93: " + str(Index.locate(self, 20, 93, 1)))
     """
     def get_value(self, assignment_num, key):
         if (key > 0 and key <= self.table.base_rid):
