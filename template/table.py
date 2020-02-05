@@ -16,6 +16,8 @@ class Record:
         self.key = key
         self.columns = columns
 
+    def __str__(self):
+        return f"Record(RID: {self.rid}, Columns: {self.columns})"
 
 class Table:
     """
@@ -87,15 +89,13 @@ class Table:
     def update_tail_page(self, col, value, base_rid):
         pr_id = base_rid // (512 + 1)  # given the base_rid we can find the page range we want
         # update the page linked to the col
-        print(str(col) + " writing val: " + str(value) + " of type " + str(type(value)))
+        # print(str(col) + " writing val: " + str(value) + " of type " + str(type(value)))
         cur_pr = self.page_ranges[pr_id]
         index_relative = cur_pr.free_tail_pages[col]
         # index_relative = self.free_tail_pages[col]
         pg = cur_pr.tail_pages[index_relative]
         error = pg.write(value)
         if error == -1:  # maximum size reached in page
-            print("col:" + str(col) + " in page " + str(index_relative) + " is full, making a new one")
-
             # create new page
             page = Page()
 
@@ -117,25 +117,26 @@ class Table:
     def update_tail_rid(self, column_index, rid, value, base_rid):
         pr_id = base_rid // (512 + 1)
         cur_pr = self.page_ranges[pr_id]
-        if (column_index < 0 or column_index > self.num_columns):
-            print("updating a rid in base " + str(column_index) + " out of bounds")
-        print("updating tail rid " + str(rid) + " @ col " + str(column_index) + " with value: " + str(value))
+        # if (column_index < 0):
+            # print("updating a rid in tail " + str(column_index) + " out of bounds")
+        # print("updating tail rid " + str(rid) + " @ col " + str(column_index) + " with value: " + str(value))
         cur_pr.tail_pages[column_index].set_record(rid, value)
 
     def update_base_rid(self, column_index, rid, value):
         pr_id = rid // (512 + 1)
         cur_pr = self.page_ranges[pr_id]
-        if (column_index < 0 or column_index > self.num_columns):
-            print("updating a rid in base " + str(column_index) + " out of bounds")
-        print("updating rid " + str(rid) + " @ col " + str(column_index) + " with value: " + str(value))
+        # if (column_index < 0 or column_index > self.num_columns):
+            # print("updating a rid in base " + str(column_index) + " out of bounds")
+        # print("updating rid " + str(rid) + " @ col " + str(column_index) + " with value: " + str(value))
         base_page_index = cur_pr.free_base_pages[column_index]
-        cur_pr.base_pages[base_page_index].set_record(rid, value)
+        base_offset = rid - (512 * pr_id)
+        cur_pr.base_pages[base_page_index].set_record(base_offset, value)
 
     def create_base_page(self, col_name):
         # check current PR can hold more
         self.create_new_pr_if_necessary()
 
-        print("creating new page for " + str(col_name))
+        # print("creating new page for " + str(col_name))
         # create the page and push to array holding pages
         new_page = Page()
         # also add page to the list of base pages in pr
@@ -144,15 +145,15 @@ class Table:
         cur_pr.free_base_pages.append(len(cur_pr.base_pages) - 1)
 
     def update_base_page(self, index, value, rid):
-        print("updating col", index, "with", value, "for rid", rid)
+        # print("updating col", index, "with", value, "for rid", rid)
         # update the page linked to the index
         pr_id = rid // (512 + 1)
         # index_relative = self.free_base_pages[index]
-        print("pr_id", pr_id)
+        # print("pr_id", pr_id)
         
         if pr_id >= len(self.page_ranges): #no new page range
             # make new page range
-            print("making new pange range")
+            # print("making new pange range")
             self.cur_page_range_id += 1  # this pr is full - update the pr id
             new_pr = PageRange(self.cur_page_range_id, self.num_columns)
             self.page_ranges.append(new_pr)  # add this new pr with new id to the PR list
@@ -161,16 +162,11 @@ class Table:
                 self.create_base_page(x)
             
         pr = self.page_ranges[pr_id]
-        print("number of base pages", pr.num_base_pages)
-        # print("free pafge", pr.free_base_pages)
         index_relative = pr.free_base_pages[index]
-        # print("index_relative", index_relative)
         error = pr.base_pages[index_relative].write(value)
         # error = self.base_pages[index_relative].write(value)
         if error == -1:  # maximum size reached in page
-            print("col:" + str(index) + " in page " + str(index_relative) + " is full, making a new one", rid)
             # similar to above check if we have space in page range/create if necessary/update
-            # self.create_new_pr_if_necessary()
             # create new page
             page = Page()
 

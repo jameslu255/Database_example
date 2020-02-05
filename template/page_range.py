@@ -19,5 +19,5 @@ class PageRange:
     # check if our page range still has space to add more pages
     def page_range_has_capacity(self):
         # use 16 for now number changes depending on how many max pages we want to store
-        print("checking capacity, cur at ", self.num_base_pages)
+        # print("checking capacity, cur at ", self.num_base_pages)
         return (self.max_capacity - self.num_base_pages) >= 0

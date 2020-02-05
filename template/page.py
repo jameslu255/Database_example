@@ -22,6 +22,7 @@ class Page:
         #    print(f"Record: {record_num}")
         #    print(f"Num_Records: {self.num_records}")
         #    return bytes()
+
         return self.data[record_num * 8: record_num * 8 + 8]
 
     def get_record_int(self, record_num):
