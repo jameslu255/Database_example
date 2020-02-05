@@ -165,7 +165,7 @@ class Query:
                     # we are in the right column, but the wrong tail page associated with it
                     # this is probably because of the indirection value was not dealt with before 
                     # there could be a latest value for a column in a previous tail record
-                    offset_exists = tail_page.num_records
+                    offset_exists = tail_page_offset
                     indirection_value = indirection_data
                     while(offset_exists == 0): #while the current tail page doesn't have a value
                         # get the right number in the right tail record 
@@ -368,7 +368,7 @@ class Query:
         query_columns[aggregate_column_index] = 1
         # print(f"query_columns: {query_columns}")
         count = 0
-        for i in range(start_range, end_range):
+        for i in range(start_range, end_range + 1):
             record = self.select(i, query_columns)
             if len(record) == 0: continue
             data = record[0].columns
