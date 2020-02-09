@@ -243,6 +243,7 @@ class Query:
             self.table.create_tail_page("rid_t", rid_base) #index 1
             self.table.create_tail_page("timestamp_t", rid_base)#index 2
             self.table.create_tail_page("schema_t", rid_base)#index 3
+            self.table.create_tail_page("base_rid", rid_base)  # index 4
             for x in range(self.table.num_columns):
                 self.table.create_tail_page(x, rid_base)
             # Add the indices to the tail page directory
