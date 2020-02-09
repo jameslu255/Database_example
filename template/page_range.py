@@ -12,7 +12,7 @@ class PageRange:
         self.end_rid_base = 0
         self.start_rid_tail = 0  # first starting RID of tail in this page range (0 for null value since rid start at 1)
         self.end_rid_tail = 0
-        self.max_capacity = (4 + num_cols)       # want to hold num_cols and plus 4 default columns
+        self.max_capacity = (5 + num_cols)       # want to hold num_cols and plus 4 default columns
         self.free_base_pages = []
         self.free_tail_pages = []
 

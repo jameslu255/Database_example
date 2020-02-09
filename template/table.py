@@ -7,11 +7,8 @@ INDIRECTION_COLUMN = 0
 RID_COLUMN = 1
 TIMESTAMP_COLUMN = 2
 SCHEMA_ENCODING_COLUMN = 3
-BASE_RID_COLUMN = 4
 TPS_COLUMN = 4
-
-
-
+BASE_RID_COLUMN = 4
 
 class Record:
 
@@ -83,7 +80,7 @@ class Table:
         cur_pr.tail_pages.append(new_page)
 
         # keep track of index of page relative to array index
-        if (len(cur_pr.free_tail_pages) < self.num_columns + 4):  # when initializing
+        if (len(cur_pr.free_tail_pages) < self.num_columns + 5):  # when initializing
             cur_pr.free_tail_pages.append(len(cur_pr.tail_pages) - 1)
             # self.free_tail_pages.append(len(self.tail_pages) - 1)
         else:  # when creating new page and need to update the index
@@ -163,7 +160,7 @@ class Table:
             new_pr = PageRange(self.cur_page_range_id, self.num_columns)
             self.page_ranges.append(new_pr)  # add this new pr with new id to the PR list
             # initialize base pages on new pange range creation
-            for x in range(self.num_columns + 4):
+            for x in range(self.num_columns + 5):
                 self.create_base_page(x)
             
         pr = self.page_ranges[pr_id]

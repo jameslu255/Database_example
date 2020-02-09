@@ -57,7 +57,7 @@ class Query:
             indirection_value = indirection_page.get_record_int(indirection_offset)
             
             # update index to find the previous page for this column
-            rid_index -= (4 + self.table.num_columns)
+            rid_index -= (5 + self.table.num_columns)
         pass
 
 
@@ -84,7 +84,7 @@ class Query:
         
         # add each column's value to the respective page
         for x in range(len(columns)):
-            self.table.update_base_page(x + 4, columns[x], rid)
+            self.table.update_base_page(x + 5, columns[x], rid)
         
         # grab current page range 
         # pr_id = rid_base // (max_page_size / 8)
@@ -95,7 +95,7 @@ class Query:
         # SID -> RID
         self.table.keys[key] = self.table.base_rid
         # RID -> page_index
-        for x in range(len(columns) + 4):
+        for x in range(len(columns) + 5):
             # page_directory_indexes.append(self.table.free_base_pages[x])
             page_directory_indexes.append(cur_pr.free_base_pages[x])
         self.table.base_page_directory[self.table.base_rid] = page_directory_indexes
@@ -141,20 +141,20 @@ class Query:
         for i in range(len(query_columns)):
             # Check schema (base page or tail page?)
             # If base page
-            has_prev_tail_pages = self.bit_is_set(i+4, schema_data_int)
+            has_prev_tail_pages = self.bit_is_set(i+5, schema_data_int)
             if query_columns[i] == 1 and not has_prev_tail_pages:
-                base_page_index = base_page_indices[i+4]
+                base_page_index = base_page_indices[i+5]
                 base_page = page_range.base_pages[base_page_index]
                 base_data = base_page.get_record_int(offset)
                 # print("index",i,"appending base data", base_data)
                 columns.append(base_data)
-                # print(f"Column {i+4} -> Base Page Index: {base_page_index} -> Data: {base_data}")
+                # print(f"Column {i+5} -> Base Page Index: {base_page_index} -> Data: {base_data}")
             # If tail page
             elif query_columns[i] == 1 and has_prev_tail_pages:# query this column, but it's been updated before
                 # get tail page value of this column 
                 # grab index and offset of this tail page
-                column_index = i + 4
-                tail_page_index_offset_tuple = tail_page_indices[i+4]
+                column_index = i + 5
+                tail_page_index_offset_tuple = tail_page_indices[i+5]
                 # print(f"tail_page (page index, offset): {tail_page_index_offset_tuple}")
                 tail_page_index = tail_page_index_offset_tuple[0]
                 tail_page_offset = tail_page_index_offset_tuple[1]
@@ -207,7 +207,7 @@ class Query:
         return binary
 
     def bit_is_set(self, column, schema_enc):
-        mask = 1 << (4 + self.table.num_columns - column - 1)
+        mask = 1 << (5 + self.table.num_columns - column - 1)
         return schema_enc & mask > 0
 
 
@@ -247,7 +247,7 @@ class Query:
             for x in range(self.table.num_columns):
                 self.table.create_tail_page(x, rid_base)
             # Add the indices to the tail page directory
-            for x in range(len(columns) + 4):
+            for x in range(len(columns) + 5):
                 page_index = cur_pr.free_tail_pages[x]
                 page = cur_pr.tail_pages[page_index]
                 tail_page_directory.append((page_index, page.num_records))
@@ -289,9 +289,9 @@ class Query:
                     self.table.create_tail_page(TIMESTAMP_COLUMN, rid_base)
                     self.table.create_tail_page(SCHEMA_ENCODING_COLUMN, rid_base)
                     for x in range(self.table.num_columns):
-                        self.table.create_tail_page(x + 4, rid_base)
+                        self.table.create_tail_page(x + 5, rid_base)
                     # Add the indices to the tail page directory
-                    for x in range(len(columns) + 4):
+                    for x in range(len(columns) + 5):
                         # page_index = self.table.free_tail_pages[x]
                         page_index = cur_pr.free_tail_pages[x]
                         # page = self.table.tail_pages[page_index]
@@ -306,7 +306,7 @@ class Query:
         # find schema encoding of the new tail record
         # by comparing value of all the columns of this new tail record
         # with the record in the base page
-        for x in range(4 + len(columns)):
+        for x in range(5 + len(columns)):
             # get base page val @ rid_base
             base_page_index = self.table.base_page_directory[rid_base][x]
             # base_page = self.table.base_pages[base_page_index]
@@ -321,7 +321,7 @@ class Query:
             elif x == SCHEMA_ENCODING_COLUMN:
                 schema_encoding += str(int(0 == base_value))
             else:
-                schema_encoding += str(int(columns[x - 4] != None))
+                schema_encoding += str(int(columns[x - 5] != None))
         schema_encoding = int(schema_encoding, 2)
 
         # write to the tail pages
@@ -332,9 +332,9 @@ class Query:
         self.table.update_tail_page(SCHEMA_ENCODING_COLUMN, schema_encoding, rid_base)
         for x in range(len(columns)):
             if columns[x] != None:
-                self.table.update_tail_page(x + 4, columns[x], rid_base)
+                self.table.update_tail_page(x + 5, columns[x], rid_base)
         # Add the indices to the tail page directory
-        for x in range(len(columns) + 4):
+        for x in range(len(columns) + 5):
             # page_index = self.table.free_tail_pages[x]
             page_index = cur_pr.free_tail_pages[x]
             # page = self.table.tail_pages[page_index]
