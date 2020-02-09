@@ -71,15 +71,26 @@ class Table:
         for x in range(num_columns):
             self.create_base_page(x)
 
-    def __merge(self):
+
+    def get_page_range(self, base_rid):
+        pr_id = (base_rid // (PAGE_RANGE_MAX_RECORDS + 1))  # given the base_rid we can find the page range we want
+        return self.page_ranges[pr_id]
+
+
+
+    def __merge(self, page_range):
+        base_pages_copy = page_range.base_pages
+
+
         pass
+
+
 
     def create_tail_page(self, col, base_rid):
         # get the base_page that's getting updated rid (passed in as base_rid)
         # find the page range that base_page is in
         # add the tail page to that page range
-        pr_id = (base_rid // (PAGE_RANGE_MAX_RECORDS + 1))  # given the base_rid we can find the page range we want
-        cur_pr = self.page_ranges[pr_id]
+        cur_pr = self.get_page_range(base_rid)
 
         # create the page and push to array holding pages
         new_page = Page()
@@ -96,11 +107,12 @@ class Table:
 
         cur_pr.num_tail_pages += 1
 
+
+
     def update_tail_page(self, col, value, base_rid):
-        pr_id = base_rid // (PAGE_RANGE_MAX_RECORDS + 1)  # given the base_rid we can find the page range we want
         # update the page linked to the col
         # print(str(col) + " writing val: " + str(value) + " of type " + str(type(value)))
-        cur_pr = self.page_ranges[pr_id]
+        cur_pr = self.get_page_range(base_rid)
         index_relative = cur_pr.free_tail_pages[col]
         # index_relative = self.free_tail_pages[col]
         pg = cur_pr.tail_pages[index_relative]
@@ -120,23 +132,27 @@ class Table:
             cur_pr.free_tail_pages[col] = len(cur_pr.tail_pages) - 1
             # self.free_pages[col].append(len(pages) - 1)
 
+
+
     def update_tail_rid(self, column_index, rid, value, base_rid):
-        pr_id = base_rid // (PAGE_RANGE_MAX_RECORDS + 1)
-        cur_pr = self.page_ranges[pr_id]
+        cur_pr = self.get_page_range(base_rid)
         # if (column_index < 0):
             # print("updating a rid in tail " + str(column_index) + " out of bounds")
         # print("updating tail rid " + str(rid) + " @ col " + str(column_index) + " with value: " + str(value))
         cur_pr.tail_pages[column_index].set_record(rid, value)
 
+
+
     def update_base_rid(self, column_index, rid, value):
-        pr_id = rid // (PAGE_RANGE_MAX_RECORDS + 1)
-        cur_pr = self.page_ranges[pr_id]
+        cur_pr = self.get_page_range(rid)
         # if (column_index < 0 or column_index > self.num_columns):
             # print("updating a rid in base " + str(column_index) + " out of bounds")
         # print("updating rid " + str(rid) + " @ col " + str(column_index) + " with value: " + str(value))
         base_page_index = cur_pr.free_base_pages[column_index]
         base_offset = rid - (PAGE_RANGE_MAX_RECORDS * pr_id)
         cur_pr.base_pages[base_page_index].set_record(base_offset, value)
+
+
 
     def create_base_page(self, col_name):
         # check current PR can hold more
@@ -149,6 +165,8 @@ class Table:
         cur_pr = self.page_ranges[self.cur_page_range_id]
         cur_pr.base_pages.append(new_page)
         cur_pr.free_base_pages.append(len(cur_pr.base_pages) - 1)
+
+
 
     def update_base_page(self, index, value, rid):
         # print("updating col", index, "with", value, "for rid", rid)
@@ -184,6 +202,8 @@ class Table:
             
             # increment the num pages count in either case (full or not full since we are adding a new page)
             pr.num_base_pages += 1
+
+
 
     # creates a new page range if the current one gets filled up/does housekeeping stuff (update vals)
     def create_new_pr_if_necessary(self):
