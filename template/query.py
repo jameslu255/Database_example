@@ -333,6 +333,7 @@ class Query:
         self.table.update_tail_page(RID_COLUMN, rid, rid_base)
         self.table.update_tail_page(TIMESTAMP_COLUMN, timestamp, rid_base)
         self.table.update_tail_page(SCHEMA_ENCODING_COLUMN, schema_encoding, rid_base)
+        self.table.update_tail_page(BASE_RID_COLUMN, rid_base, rid_base)
         for x in range(len(columns)):
             if columns[x] != None:
                 self.table.update_tail_page(x + 5, columns[x], rid_base)
