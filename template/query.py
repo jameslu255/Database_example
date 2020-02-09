@@ -230,6 +230,9 @@ class Query:
         pr_id = rid_base // (512 + 1)
         cur_pr = self.table.page_ranges[pr_id]
 
+        # Update number of updates for current page range
+        cur_pr.update_count += 1
+
         # get relative rid to new page range since it starts at 0
         rid_offset = rid_base - (512 * pr_id)
 
