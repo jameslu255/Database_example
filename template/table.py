@@ -8,7 +8,15 @@ RID_COLUMN = 1
 TIMESTAMP_COLUMN = 2
 SCHEMA_ENCODING_COLUMN = 3
 TPS_COLUMN = 4
+
 BASE_RID_COLUMN = 4
+
+
+PAGE_RANGE_MAX_RECORDS = 512
+
+
+
+
 
 class Record:
 
@@ -70,7 +78,7 @@ class Table:
         # get the base_page that's getting updated rid (passed in as base_rid)
         # find the page range that base_page is in
         # add the tail page to that page range
-        pr_id = (base_rid // (512 + 1))  # given the base_rid we can find the page range we want
+        pr_id = (base_rid // (PAGE_RANGE_MAX_RECORDS + 1))  # given the base_rid we can find the page range we want
         cur_pr = self.page_ranges[pr_id]
 
         # create the page and push to array holding pages
@@ -89,7 +97,7 @@ class Table:
         cur_pr.num_tail_pages += 1
 
     def update_tail_page(self, col, value, base_rid):
-        pr_id = base_rid // (512 + 1)  # given the base_rid we can find the page range we want
+        pr_id = base_rid // (PAGE_RANGE_MAX_RECORDS + 1)  # given the base_rid we can find the page range we want
         # update the page linked to the col
         # print(str(col) + " writing val: " + str(value) + " of type " + str(type(value)))
         cur_pr = self.page_ranges[pr_id]
@@ -117,7 +125,7 @@ class Table:
         cur_pr.end_rid_tail = self.tail_rid
 
     def update_tail_rid(self, column_index, rid, value, base_rid):
-        pr_id = base_rid // (512 + 1)
+        pr_id = base_rid // (PAGE_RANGE_MAX_RECORDS + 1)
         cur_pr = self.page_ranges[pr_id]
         # if (column_index < 0):
             # print("updating a rid in tail " + str(column_index) + " out of bounds")
@@ -125,13 +133,13 @@ class Table:
         cur_pr.tail_pages[column_index].set_record(rid, value)
 
     def update_base_rid(self, column_index, rid, value):
-        pr_id = rid // (512 + 1)
+        pr_id = rid // (PAGE_RANGE_MAX_RECORDS + 1)
         cur_pr = self.page_ranges[pr_id]
         # if (column_index < 0 or column_index > self.num_columns):
             # print("updating a rid in base " + str(column_index) + " out of bounds")
         # print("updating rid " + str(rid) + " @ col " + str(column_index) + " with value: " + str(value))
         base_page_index = cur_pr.free_base_pages[column_index]
-        base_offset = rid - (512 * pr_id)
+        base_offset = rid - (PAGE_RANGE_MAX_RECORDS * pr_id)
         cur_pr.base_pages[base_page_index].set_record(base_offset, value)
 
     def create_base_page(self, col_name):
@@ -149,7 +157,7 @@ class Table:
     def update_base_page(self, index, value, rid):
         # print("updating col", index, "with", value, "for rid", rid)
         # update the page linked to the index
-        pr_id = rid // (512 + 1)
+        pr_id = rid // (PAGE_RANGE_MAX_RECORDS + 1)
         # index_relative = self.free_base_pages[index]
         # print("pr_id", pr_id)
         
