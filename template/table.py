@@ -7,10 +7,13 @@ INDIRECTION_COLUMN = 0
 RID_COLUMN = 1
 TIMESTAMP_COLUMN = 2
 SCHEMA_ENCODING_COLUMN = 3
-BASE_RID_COLUMN = 4
 TPS_COLUMN = 4
 
+BASE_RID_COLUMN = 4
+
+
 PAGE_RANGE_MAX_RECORDS = 512
+
 
 
 
@@ -85,7 +88,7 @@ class Table:
         cur_pr.tail_pages.append(new_page)
 
         # keep track of index of page relative to array index
-        if (len(cur_pr.free_tail_pages) < self.num_columns + 4):  # when initializing
+        if (len(cur_pr.free_tail_pages) < self.num_columns + 5):  # when initializing
             cur_pr.free_tail_pages.append(len(cur_pr.tail_pages) - 1)
             # self.free_tail_pages.append(len(self.tail_pages) - 1)
         else:  # when creating new page and need to update the index
@@ -116,10 +119,6 @@ class Table:
             # update free page index to point to new blank page
             cur_pr.free_tail_pages[col] = len(cur_pr.tail_pages) - 1
             # self.free_pages[col].append(len(pages) - 1)
-        if cur_pr.end_rid_tail == 0:
-            cur_pr.start_rid_tail = self.tail_rid
-
-        cur_pr.end_rid_tail = self.tail_rid
 
     def update_tail_rid(self, column_index, rid, value, base_rid):
         pr_id = base_rid // (PAGE_RANGE_MAX_RECORDS + 1)
@@ -165,7 +164,7 @@ class Table:
             new_pr = PageRange(self.cur_page_range_id, self.num_columns)
             self.page_ranges.append(new_pr)  # add this new pr with new id to the PR list
             # initialize base pages on new pange range creation
-            for x in range(self.num_columns + 4):
+            for x in range(self.num_columns + 5):
                 self.create_base_page(x)
             
         pr = self.page_ranges[pr_id]
@@ -185,12 +184,6 @@ class Table:
             
             # increment the num pages count in either case (full or not full since we are adding a new page)
             pr.num_base_pages += 1
-
-        # print("current page range: " + str(cur_pr_id_num))
-        if pr.start_rid_base == 0:
-            pr.start_rid_base = self.base_rid
-
-        pr.end_rid_base = self.base_rid
 
     # creates a new page range if the current one gets filled up/does housekeeping stuff (update vals)
     def create_new_pr_if_necessary(self):
