@@ -60,6 +60,7 @@ class Table:
         self.create_base_page("rid")  # index 1
         self.create_base_page("timestamp")  # index 2
         self.create_base_page("schema")  # index 3
+        self.create_base_page("tps")  # index 4
 
         # create pages for the key and the data columns
         for x in range(num_columns):
