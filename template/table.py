@@ -80,12 +80,15 @@ class Table:
 
     def __merge(self, page_range):
 
+        # Copy base pages
+        base_pages_copy = page_range.base_pages
+
         # Grab page_range ID
         pr_id = page_range.id_num
 
         # Calculate key start and end index for given page range (holds 512 records)
-        pr_key_start = pr_id * PAGE_RANGE_MAX_RECORDS
-        pr_key_end = pr_key_start + PAGE_RANGE_MAX_RECORDS
+        pr_RID_start = pr_id * PAGE_RANGE_MAX_RECORDS
+        pr_RID_end = pr_RID_start + PAGE_RANGE_MAX_RECORDS
 
         # Grab keys for that given page range
         pr_keys  =[]
@@ -95,25 +98,12 @@ class Table:
 
 
 
-
-
-
-        base_pages_copy = page_range.base_pages
-
         # tail_page_directory: Tail RID -> Tail pages for columns
 
         # Get and check indirection
         key_page_index = base_page_indices[INDIRECTION_COLUMN]
         key_page = page_range.base_pages[indirection_page_index]
         key_data = indirection_page.get_record_int(offset)
-        keys =
-
-        for key in keys:
-            # Find RID from key, keys = {SID: RID}
-            rid = self.table.keys[key]
-
-
-
 
         tail_page_indices = self.table.tail_page_directory[]
 
