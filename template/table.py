@@ -79,8 +79,60 @@ class Table:
 
 
     def __merge(self, page_range):
+
+        # Grab page_range ID
+        pr_id = page_range.id_num
+
+        # Calculate key start and end index for given page range (holds 512 records)
+        pr_key_start = pr_id * PAGE_RANGE_MAX_RECORDS
+        pr_key_end = pr_key_start + PAGE_RANGE_MAX_RECORDS
+
+        # Grab keys for that given page range
+        pr_keys  =[]
+        for i in range(pr_key_start, pr_key_end):
+            pr_keys.append(self.keys[i])
+
+
+
+
+
+
+
         base_pages_copy = page_range.base_pages
 
+        # tail_page_directory: Tail RID -> Tail pages for columns
+
+        # Get and check indirection
+        key_page_index = base_page_indices[INDIRECTION_COLUMN]
+        key_page = page_range.base_pages[indirection_page_index]
+        key_data = indirection_page.get_record_int(offset)
+        keys =
+
+        for key in keys:
+            # Find RID from key, keys = {SID: RID}
+            rid = self.table.keys[key]
+
+
+
+
+        tail_page_indices = self.table.tail_page_directory[]
+
+
+
+        tail_page_index_offset_tuple = tail_page_indices[i + 5]
+        tail_page_index = tail_page_index_offset_tuple[0]
+        tail_page_offset = tail_page_index_offset_tuple[1]
+        tail_page = page_range.tail_pages[tail_page_index]
+        tail_data = tail_page.get_record_int(tail_page_offset)
+
+        # May need to get schema to change it? But what if there are updates happening at the same time?
+
+
+
+
+
+
+        tps_column = base_pages_copy[TPS_COLUMN]
 
         pass
 
