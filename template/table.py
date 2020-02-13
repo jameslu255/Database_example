@@ -83,6 +83,10 @@ class Table:
         # Copy base pages
         base_pages_copy = page_range.base_pages
 
+
+
+
+
         # Grab page_range ID
         pr_id = page_range.id_num
 
