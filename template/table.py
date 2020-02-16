@@ -26,10 +26,14 @@ class Table:
     :param key: int             #Index of table key in columns
     """
 
-    def __init__(self, name, num_columns, key):
+    def __init__(self, name, num_columns, key, table_id):
         self.name = name
         self.key = key
         self.num_columns = num_columns
+        
+        # table id 
+        self.table_id = table_id
+        
         # SID -> RID
         self.keys = {}
         # RID -> Page
