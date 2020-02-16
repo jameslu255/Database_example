@@ -46,9 +46,9 @@ class Disk:
     def update(self, pageRange):
         cur_pr_id = pageRange.id_num
         array_page_ranges = self.decode()
-        for x in array_page_ranges:
+        for i, x in enumerate(array_page_ranges):
             if x.id_num == cur_pr_id: #match page range id
-                x = pageRange
+                array_page_ranges[i] = pageRange #replace the page page range
         
         
 d = Disk("disk")
