@@ -1,5 +1,6 @@
 from template.page import *
 from template.page_range import *
+from template.query import *
 
 from time import time
 
@@ -127,8 +128,128 @@ class Table:
                 tps = tps_page.get_record_int(i)
                 if indirection > tps:
                     # MERGE
+                    # Get key for current RID to call select (get most recent info)
+                    key = key_page.get_record_int(i)
+                    query_columns = []
+                    for j in range(self.num_columns):
+                        query_columns.append(1)
+                    # record = [Record(rid, key, columns)] --> always 1 item in array so access it w/ [0]
+                    record = self.select_two(key, query_columns)[0]
+
+                    # Put record into base pages copy
+                    # columns in record object contains the data we want
+                    for value in record.columns:
+                        self.replace(i, value)
+
+
+        # Update TPS/BASE_RID
+        # Free tail pages
 
         pass
+
+
+    def replace(self):
+        pass
+
+    def select_two(self, key, query_columns):
+        if key not in self.keys:
+            return []
+
+        # Find RID from key, keys = {SID: RID}
+        rid = self.keys[key]
+
+        # Find Page Range ID
+        pr_id = rid // 513
+        page_range = self.page_ranges[pr_id]
+
+        # get relative rid to new page range since it starts at 0
+        offset = rid - (512 * pr_id)
+
+        # Find physical pages' indices for RID from page_directory [RID:[x x x x x]]
+        base_page_indices = self.base_page_directory[rid]
+        # print(f"Found base pages: {base_page_indices}")
+
+        # Get and check indirection
+        indirection_page_index = base_page_indices[INDIRECTION_COLUMN]
+        indirection_page = page_range.base_pages[indirection_page_index]
+        indirection_data = indirection_page.get_record_int(offset)
+        if indirection_data != 0:
+            tail_page_indices = self.tail_page_directory[indirection_data]
+
+        # Get schema
+        schema_page_index = base_page_indices[SCHEMA_ENCODING_COLUMN]
+        schema_page = page_range.base_pages[schema_page_index]
+        schema_data_int = schema_page.get_record_int(offset)
+
+        # Get desired columns' page indices
+        columns = []
+        for i in range(len(query_columns)):
+            # Check schema (base page or tail page?)
+            # If base page
+            has_prev_tail_pages = self.bit_is_set(i + 5, schema_data_int)
+            if query_columns[i] == 1 and not has_prev_tail_pages:
+                base_page_index = base_page_indices[i + 5]
+                base_page = page_range.base_pages[base_page_index]
+                base_data = base_page.get_record_int(offset)
+                # print("index",i,"appending base data", base_data)
+                columns.append(base_data)
+                # print(f"Column {i+5} -> Base Page Index: {base_page_index} -> Data: {base_data}")
+            # If tail page
+            elif query_columns[i] == 1 and has_prev_tail_pages:  # query this column, but it's been updated before
+                # get tail page value of this column
+                # grab index and offset of this tail page
+                column_index = i + 5
+                tail_page_index_offset_tuple = tail_page_indices[i + 5]
+                # print(f"tail_page (page index, offset): {tail_page_index_offset_tuple}")
+                tail_page_index = tail_page_index_offset_tuple[0]
+                tail_page_offset = tail_page_index_offset_tuple[1]
+                tail_page = page_range.tail_pages[tail_page_index]
+                # print("tail_page size", tail_page.num_records, "offset", tail_page_offset)
+                tail_data = tail_page.get_record_int(tail_page_offset)
+                if (tail_page_offset == 0):  # there's supposed to be somethinghere but its the wrong tail page
+                    # we are in the right column, but the wrong tail page associated with it
+                    # this is probably because of the indirection value was not dealt with before
+                    # there could be a latest value for a column in a previous tail record
+                    offset_exists = tail_page_offset
+                    indirection_value = indirection_data
+                    while (offset_exists == 0):  # while the current tail page doesn't have a value
+                        # get the right number in the right tail record
+                        # update tail directory with the indirection value of this current tail page
+                        # make sure to find the right indirection value
+                        tp_dir = self.tail_page_directory[indirection_value]
+                        indirection_index = tp_dir[INDIRECTION_COLUMN][0]
+                        indirection_offset = tp_dir[INDIRECTION_COLUMN][1]
+                        indirection_page = page_range.tail_pages[indirection_index]
+                        indirection_value = indirection_page.get_record_int(indirection_offset)
+                        if indirection_value == 0:
+                            break
+                        column_tuple = self.tail_page_directory[indirection_value][column_index]
+                        offset_exists = column_tuple[1]
+
+                    if (offset_exists != 0):  # there exists something in this page
+                        correct_tail_page = self.tail_page_directory[indirection_value][column_index]
+                        tail_page = page_range.tail_pages[correct_tail_page[0]]
+                        tail_data = tail_page.get_record_int(correct_tail_page[1])
+                        # print("correct tail page data is in index",correct_tail_page[0],correct_tail_page[1])
+
+                columns.append(tail_data)
+        # Change this to return [TPD, Record]
+        # Element [0] TPS
+        # Element [1] is the Record
+        record = [Record(rid, key, columns)]
+        return record
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
