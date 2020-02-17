@@ -80,53 +80,38 @@ class Table:
 
     def __merge(self, page_range):
 
+        # GAME PLAN:
+        # Make a copy of the base pages
+        # Go through every row (every RID) in the base pages
+        # For each row:
+        #     Check indirection (if indirection > TPS: merge for this row)
+        #     Go to tail RID (from indirection)
+        #     Check BASE_RID (to not waste time)
+        #     Backtrack until you get all most recent updates for all columns for that row OR until you hit last merge (check TPS for last merge)
+
         # Copy base pages
-        base_pages_copy = page_range.base_pages
+        base_pages_copy = page_range.base_pages.copy()
 
+        # Get first RID in this page range (just to access base page indices)
+        rid = page_range.id_num * PAGE_RANGE_MAX_RECORDS
 
-
-
-
-        # Grab page_range ID
-        pr_id = page_range.id_num
-
-        # Calculate key start and end index for given page range (holds 512 records)
-        pr_RID_start = pr_id * PAGE_RANGE_MAX_RECORDS
-        pr_RID_end = pr_RID_start + PAGE_RANGE_MAX_RECORDS
-
-        # Grab keys for that given page range
-        pr_keys  =[]
-        for i in range(pr_key_start, pr_key_end):
-            pr_keys.append(self.keys[i])
-
-
-
-
-        # tail_page_directory: Tail RID -> Tail pages for columns
+        # Find physical pages' indices for RID from page_directory [RID:[x x x x x]]
+        base_page_indices = self.table.base_page_directory[rid]
+        # print(f"Found base pages: {base_page_indices}")
 
         # Get and check indirection
-        key_page_index = base_page_indices[INDIRECTION_COLUMN]
-        key_page = page_range.base_pages[indirection_page_index]
-        key_data = indirection_page.get_record_int(offset)
+        indirection_page_index = base_page_indices[INDIRECTION_COLUMN]
+        indirection_page = page_range.base_pages[indirection_page_index]
 
-        tail_page_indices = self.table.tail_page_directory[]
+        # Get the number of rows in this page range
+        num_rows = indirection_page.num_records
 
-
-
-        tail_page_index_offset_tuple = tail_page_indices[i + 5]
-        tail_page_index = tail_page_index_offset_tuple[0]
-        tail_page_offset = tail_page_index_offset_tuple[1]
-        tail_page = page_range.tail_pages[tail_page_index]
-        tail_data = tail_page.get_record_int(tail_page_offset)
-
-        # May need to get schema to change it? But what if there are updates happening at the same time?
-
-
-
-
-
-
-        tps_column = base_pages_copy[TPS_COLUMN]
+        # Go through every row (every RID)
+        for i in range(rid, num_rows + 1):
+            indirection = something
+            tps = something
+            if indirection > tps:
+                # MERGE
 
         pass
 
