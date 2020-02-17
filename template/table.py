@@ -7,9 +7,11 @@ INDIRECTION_COLUMN = 0
 RID_COLUMN = 1
 TIMESTAMP_COLUMN = 2
 SCHEMA_ENCODING_COLUMN = 3
-TPS_COLUMN = 4
 
+TPS_COLUMN = 4
 BASE_RID_COLUMN = 4
+
+KEY_COLUMN = 5
 
 
 PAGE_RANGE_MAX_RECORDS = 512
@@ -99,19 +101,31 @@ class Table:
         base_page_indices = self.table.base_page_directory[rid]
         # print(f"Found base pages: {base_page_indices}")
 
-        # Get and check indirection
+        # ----- Get a bunch of columns that we need to read info from to perform merge -----
+        # Get RIDs
+        rid_page_index = base_page_indices[RID_COLUMN]
+        rid_page = page_range.base_pages[rid_page_index]
+        # Get Indirection
         indirection_page_index = base_page_indices[INDIRECTION_COLUMN]
         indirection_page = page_range.base_pages[indirection_page_index]
+        # Get TPS
+        tps_page_index = base_page_indices[TPS_COLUMN]
+        tps_page = page_range.base_pages[tps_page_index]
+        # Get keys
+        key_page_index = base_page_indices[KEY_COLUMN]
+        key_page = page_range.base_pages[key_page_index]
 
         # Get the number of rows in this page range
-        num_rows = indirection_page.num_records
+        num_rows = key_page.num_records
 
         # Go through every row (every RID)
         for i in range(rid, num_rows + 1):
-            indirection = something
-            tps = something
-            if indirection > tps:
-                # MERGE
+            rid_data = rid_page.get_record_int(i)
+            if rid_data != 0:
+                indirection = indirection_page.get_record_int(i)
+                tps = tps_page.get_record_int(i)
+                if indirection > tps:
+                    # MERGE
 
         pass
 
