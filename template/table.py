@@ -4,17 +4,19 @@ from template.query import *
 
 from time import time
 
+# Column Indices Constants
 INDIRECTION_COLUMN = 0
 RID_COLUMN = 1
 TIMESTAMP_COLUMN = 2
 SCHEMA_ENCODING_COLUMN = 3
-
 TPS_COLUMN = 4
 BASE_RID_COLUMN = 4
 
+# Number of constant columns
+NUM_CONSTANT_COLUMNS = 5
+# Key column is always 6th column (first column before data columns)
 KEY_COLUMN = 5
-
-
+# Maximum number of records a page range can hold
 PAGE_RANGE_MAX_RECORDS = 512
 
 
