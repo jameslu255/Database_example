@@ -23,11 +23,11 @@ class Query:
         
         # grab current page range 
         # pr_id = rid_base // (max_page_size / 8)
-        pr_id = base_rid // (512 + 1)
+        pr_id = base_rid // (PAGE_RANGE_MAX_RECORDS + 1)
         cur_pr = self.table.page_ranges[pr_id]
         
         # get relative rid to new page range since it starts at 0
-        offset = base_rid - (512 * pr_id)
+        offset = base_rid - (PAGE_RANGE_MAX_RECORDS * pr_id)
         
         # set rid to invalid value - 0
         self.table.update_base_rid(RID_COLUMN, base_rid, 0)
@@ -88,7 +88,7 @@ class Query:
         
         # grab current page range 
         # pr_id = rid_base // (max_page_size / 8)
-        pr_id = rid // (512 + 1)
+        pr_id = rid // (PAGE_RANGE_MAX_RECORDS + 1)
         # print("pr_id", pr_id)
         cur_pr = self.table.page_ranges[pr_id]
         
@@ -114,11 +114,11 @@ class Query:
         rid = self.table.keys[key]
 
         # Find Page Range ID
-        pr_id = rid//513
+        pr_id = rid // (PAGE_RANGE_MAX_RECORDS + 1)
         page_range = self.table.page_ranges[pr_id]
         
         # get relative rid to new page range since it starts at 0
-        offset = rid - (512 * pr_id)
+        offset = rid - (PAGE_RANGE_MAX_RECORDS * pr_id)
 
         # Find physical pages' indices for RID from page_directory [RID:[x x x x x]]
         base_page_indices = self.table.base_page_directory[rid]
@@ -228,14 +228,14 @@ class Query:
         
         # grab current page range 
         # pr_id = rid_base // (max_page_size / 8)
-        pr_id = rid_base // (512 + 1)
+        pr_id = rid_base // (PAGE_RANGE_MAX_RECORDS + 1)
         cur_pr = self.table.page_ranges[pr_id]
 
         # Update number of updates for current page range
         cur_pr.update_count += 1
 
         # get relative rid to new page range since it starts at 0
-        rid_offset = rid_base - (512 * pr_id)
+        rid_offset = rid_base - (PAGE_RANGE_MAX_RECORDS * pr_id)
 
 
         # If there are no tail pages (i.e. first update performed)
@@ -243,11 +243,11 @@ class Query:
         # if len(self.table.tail_pages) == 0: #tail page list empty
         if len(cur_pr.tail_pages) == 0: #tail page list empty
             tail_page_directory = []
-            self.table.create_tail_page("indirection_t", rid_base) #index 0
-            self.table.create_tail_page("rid_t", rid_base) #index 1
-            self.table.create_tail_page("timestamp_t", rid_base)#index 2
-            self.table.create_tail_page("schema_t", rid_base)#index 3
-            self.table.create_tail_page("base_rid", rid_base)  # index 4
+            self.table.create_tail_page("indirection_t", rid_base)  # index 0
+            self.table.create_tail_page("rid_t", rid_base)          # index 1
+            self.table.create_tail_page("timestamp_t", rid_base)    # index 2
+            self.table.create_tail_page("schema_t", rid_base)       # index 3
+            self.table.create_tail_page("base_rid", rid_base)       # index 4
             for x in range(self.table.num_columns):
                 self.table.create_tail_page(x, rid_base)
             # Add the indices to the tail page directory
