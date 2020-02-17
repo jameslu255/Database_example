@@ -1,4 +1,5 @@
 from template.table import Table
+from template.disk import Disk
 
 class Database():
 
@@ -7,12 +8,35 @@ class Database():
         
         self.num_tables = 0
         
+        self.file_name = ""
+        
         pass
 
-    def open(self):
+    def open(self, file_name):
+        # print("open!" + str(len(self.tables)))
+        disk = Disk(file_name)
+        self.file_name = file_name
+        
+        # read disk
+        table_dict = disk.decode()
+        for key in table_dict:
+            # print("table id is " + str(key))
+            # update tables array
+            self.tables.append(table_dict[key])
+            
+        # print("fin open!" + str(len(self.tables)))
         pass
 
     def close(self):
+        # print("close!" + str(len(self.tables)))
+        disk = Disk(self.file_name)
+        disk.empty_disk()
+        # save each table into disk
+        for t in self.tables:
+            # print(t.name)
+            disk.encode_table(t)
+            
+        self.tables = []
         pass
 
     """

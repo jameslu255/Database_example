@@ -18,63 +18,68 @@ class Disk:
         self.file_name = file_name
         
         # create the file if it DNE, empty it if it does
-        open(file_name, 'w').close()
+        open(file_name, 'a+').close()
         
         self.num_table = 0
         
     # write the page range object into the disk file for that specific table
-    def encode_page_range(self, pageRange, table_id):        
-        array_page_ranges = {}
+    # def encode_page_range(self, pageRange, table_id):        
+        # arr = {}
         
-        # grab any existing page ranges in the disk file
-        if os.stat(self.file_name).st_size > 0: #file not empty
-            array_page_ranges = self.decode()
+        # # grab any existing page ranges in the disk file
+        # if os.stat(self.file_name).st_size > 0: #file not empty
+            # arr = self.decode()
         
-        # add the new page range to the array 
-        if table_id in array_page_ranges:
-            array_page_ranges[table_id].append(pageRange)
-        else:
-            array_page_ranges[table_id] = [pageRange]
+        # # add the new page range to the array 
+        # if table_id in arr: # no key for table_id
+            # arr[table_id].append(pageRange)
+        # else:
+            # arr[table_id] = [pageRange]
         
-        # write the new updated page range to file
-        with open(self.file_name, 'wb') as page_range_file:
-            pickle.dump(array_page_ranges, page_range_file)    
+        # # write the new updated page range to file
+        # with open(self.file_name, 'wb') as page_range_file:
+            # pickle.dump(arr, page_range_file)    
             
     # write the table's entire page range object into the disk file
     def encode_table(self, table):
         self.num_table += 1
-        table_id = table.table_id
         
-        array_page_ranges = {}
+        arr = {}
         
         # grab any existing page ranges in the disk file
         if os.stat(self.file_name).st_size > 0: #file not empty
-            array_page_ranges = self.decode()
+            arr = self.decode()
         
         # add the new page range to the array 
-        array_page_ranges[table_id] = table.page_ranges
+        arr[table.name] = table
         
         # write the new updated page range to file
         with open(self.file_name, 'wb') as page_range_file:
-            pickle.dump(array_page_ranges, page_range_file)
+            pickle.dump(arr, page_range_file)
             
     # return an array of page ranges
     def decode(self):
-        array_page_ranges = {}
+        arr = {}
         
-        #load n amount of page ranges to the empty array
-        with open(self.file_name, 'rb') as page_range_file:
-            array_page_ranges = pickle.load(page_range_file)
+        if os.stat(self.file_name).st_size <= 0: #file not empty
+            return {}
             
-        return array_page_ranges
+        #load n amount of page ranges to the empty array
+        with open(self.file_name, 'rb') as f:
+            arr = pickle.load(f)
+            
+        return arr
+        
+    def empty_disk(self):
+        open(self.file_name, 'w').close()
         
     # if given page is dirty, update the page in page range
-    def update(self, pageRange, table_id):
-        cur_pr_id = pageRange.id_num
-        array_page_ranges = self.decode()
-        for i, x in enumerate(array_page_ranges):
-            if x.id_num == cur_pr_id: #match page range id
-                array_page_ranges[table_id][i] = pageRange #replace the page page range
+    # def update(self, pageRange, table_id):
+        # cur_pr_id = pageRange.id_num
+        # arr = self.decode()
+        # for i, x in enumerate(arr):
+            # if x.id_num == cur_pr_id: #match page range id
+                # arr[table_id][i] = pageRange #replace the page page range
         
         
 # # test disk
@@ -93,6 +98,7 @@ class Disk:
     # records[key] = [key, randint(0, 20), randint(0, 20), randint(0, 20), randint(0, 20)]
     # query.insert(*records[key])
 # keys = sorted(list(records.keys()))
+# query.update(92106429, *[None, None, None, None, 69])
 
 # records = {}
 # for i in range(0, 50):
@@ -101,13 +107,17 @@ class Disk:
     # query_temp.insert(*records[key])
 # keys = sorted(list(records.keys()))
 # print("Insert finished")
+# query_temp.update(92106429, *[None, None, None, None, 69])
+# query_temp.update(92106429, *[None, None, None, None, 70])
 
 # # write the page ranges in grades_table into disk 
-# for pr in grades_table.page_ranges:
-    # d.encode_page_range(pr, grades_table.table_id)
+# d.encode_table(grades_table)
+# d.encode_table(table_temp)
+# # for pr in grades_table.page_ranges:
+    # # d.encode_page_range(pr, grades_table.table_id)
     
-# for pr in table_temp.page_ranges:
-    # d.encode_page_range(pr, table_temp.table_id)
+# # for pr in table_temp.page_ranges:
+    # # d.encode_page_range(pr, table_temp.table_id)
 
 # # read the page ranges in disk
 # print("----------------base page-------------------------")
