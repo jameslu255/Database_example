@@ -87,9 +87,10 @@ class Table:
         # Go through every row (every RID) in the base pages
         # For each row:
         #     Check indirection (if indirection > TPS: merge for this row)
-        #     Go to tail RID (from indirection)
-        #     Check BASE_RID (to not waste time)
-        #     Backtrack until you get all most recent updates for all columns for that row OR until you hit last merge (check TPS for last merge)
+        #     Merge:
+        #         Call select to obtain most recent updates
+        #         Modify base pages copy
+
 
         # Copy base pages
         base_pages_copy = page_range.base_pages.copy()
