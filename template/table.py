@@ -136,23 +136,32 @@ class Table:
                     for j in range(self.num_columns):
                         query_columns.append(1)
                     # record = [Record(rid, key, columns)] --> always 1 item in array so access it w/ [0]
-                    record = self.select_two(key, query_columns)[0]
+                    select_return = self.select_two(key, query_columns)
+                    new_tps = select_return[0]
+                    record = select_return[1]
 
-                    # Put record into base pages copy
+                    # Update TPS
+                    self.replace(i, TPS_COLUMN, new_tps)
+
+                    # Put new values into base pages copy
                     # columns in record object contains the data we want
+                    # column_index is the index of the column that we are merging into
+                    # (may need to change to +2 if select doesnt include key in return)
+                    column_index = NUM_CONSTANT_COLUMNS + 1
                     for value in record.columns:
-                        self.replace(i, value)
+                        self.replace(i, column_index, value)
+                        column_index += 1
 
-
-        # Update TPS/BASE_RID
+        # Update real base pages
         # Free tail pages
-
+        # Update tail directory
         pass
 
 
-    def replace(self):
+    def replace(self, rid, column, value):
         pass
 
+    # Change so that don't start at very bottom, but rather start at merge point
     def select_two(self, key, query_columns):
         if key not in self.keys:
             return []
