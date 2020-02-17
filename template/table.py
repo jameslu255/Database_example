@@ -180,23 +180,22 @@ class Table:
 
 
     def update_tail_rid(self, column_index, rid, value, base_rid):
-        cur_pr = self.get_page_range(base_rid)
+        pr_id = base_rid // (PAGE_RANGE_MAX_RECORDS + 1)
+        cur_pr = self.page_ranges[pr_id]
         # if (column_index < 0):
             # print("updating a rid in tail " + str(column_index) + " out of bounds")
         # print("updating tail rid " + str(rid) + " @ col " + str(column_index) + " with value: " + str(value))
         cur_pr.tail_pages[column_index].set_record(rid, value)
 
-
-
     def update_base_rid(self, column_index, rid, value):
-        cur_pr = self.get_page_range(rid)
+        pr_id = rid // (PAGE_RANGE_MAX_RECORDS + 1)
+        cur_pr = self.page_ranges[pr_id]
         # if (column_index < 0 or column_index > self.num_columns):
             # print("updating a rid in base " + str(column_index) + " out of bounds")
         # print("updating rid " + str(rid) + " @ col " + str(column_index) + " with value: " + str(value))
         base_page_index = cur_pr.free_base_pages[column_index]
         base_offset = rid - (PAGE_RANGE_MAX_RECORDS * pr_id)
         cur_pr.base_pages[base_page_index].set_record(base_offset, value)
-
 
 
     def create_base_page(self, col_name):
