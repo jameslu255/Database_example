@@ -215,7 +215,6 @@ class Query:
     """
     # Update a record with specified key and columns
     """
-    # FOR MERGE: Make sure to write in Base_RID every time we make an update
     def update(self, key, *columns):
         self.table.tail_rid += 1
         
