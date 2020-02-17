@@ -1,6 +1,6 @@
 from template.page import *
 from template.page_range import *
-
+from template.manager import * 
 from time import time
 
 INDIRECTION_COLUMN = 0
@@ -57,6 +57,11 @@ class Table:
         self.create_base_page("timestamp")  # index 2
         self.create_base_page("schema")  # index 3
 
+        # BufferPoolManager
+        self.capacity = (num_columns + 4) * 4
+        self.base_page_manager = BufferPoolManager(filename = "base_pages.bin")
+        self.tail_page_manager = BufferPoolManager(filename = "tail_pages.bin")
+
         # create pages for the key and the data columns
         for x in range(num_columns):
             self.create_base_page(x)
@@ -64,7 +69,14 @@ class Table:
     def __merge(self):
         pass
 
+    def has_capacity():
+        return len(self.base_pages) + len(self.tail_pages) <= self.capacity
+
     def create_tail_page(self, col, base_rid):
+       # Check if we have room for the new page
+        if not self.has_capacity():
+            tail_page_manager.evict(self.tail_pages)
+
         # get the base_page that's getting updated rid (passed in as base_rid)
         # find the page range that base_page is in
         # add the tail page to that page range
@@ -73,7 +85,8 @@ class Table:
 
         # create the page and push to array holding pages
         new_page = Page()
-
+        # Check if we have room for the new page
+        
         # add this tail page to the page range's tail list
         cur_pr.tail_pages.append(new_page)
 
@@ -96,6 +109,10 @@ class Table:
         pg = cur_pr.tail_pages[index_relative]
         error = pg.write(value)
         if error == -1:  # maximum size reached in page
+            # Check if we have room for the new page
+            if not has_capacity():
+                tail_page_manager.evict(self.tail_pages)
+
             # create new page
             page = Page()
 
@@ -133,6 +150,11 @@ class Table:
         cur_pr.base_pages[base_page_index].set_record(base_offset, value)
 
     def create_base_page(self, col_name):
+       # Check if we have room for the new page
+        if not has_capacity():
+            tail_page_manager.evict(self.tail_pages)
+
+
         # check current PR can hold more
         self.create_new_pr_if_necessary()
 
@@ -166,6 +188,11 @@ class Table:
         error = pr.base_pages[index_relative].write(value)
         # error = self.base_pages[index_relative].write(value)
         if error == -1:  # maximum size reached in page
+            # Check if we have room for the new page
+            if not has_capacity():
+                base_page_manager.evict(self.base_pages)
+
+
             # similar to above check if we have space in page range/create if necessary/update
             # create new page
             page = Page()

@@ -1,4 +1,5 @@
 from template.table import *
+import mmap
 import collections
 
 # https://www.kunxi.org/2014/05/lru-cache-in-python/
@@ -23,22 +24,32 @@ class BufferPoolManager:
     manage the Table class (bufferpool).
     """
 
-    def __init__(num_columns):
-        self.dirty_pages = [False] * num_columns
-        self.pinned_pages = [0] * num_columns
+    def __init__(filename):
+        self.dirty_pages = set()
+        self.pinned_pages = dict()
+        self.disk_location = {}
+        self.disk_page_id = 0
         self.lru_pages = LRUCache()
+        self.filename = filename
 
     def set_page_dirty(self, page_num):
-        self.dirty_pages[page_num] = True
+        self.dirty_pages.add(page_num)
 
     def is_page_dirty(self, page_num):
-        return self.dirty_pages[page_num]
+        return page_num in self.dirty_pages
 
     def get_num_pins(self, page_num):
         return self.pinned_pages[page_num]
 
-    def write_back(self, pages, page_num):
-        pass
+    def write_back(self, pages, page_num): 
+        with open(self.filename, "wb") as f:
+            self.disk_page_id += 1
+            disk_location[page_num] = self.disk_page_id
+            mm = mmap.mmap(f.fileno(), 0)
+            start = 4096 * (self.disk_page_id - 1)
+            end = 4096 * self.disk_page_id
+            mm[start: end] = pages[page_num]
+            mm.close()
     
     def update_page_usage(self, page_num):
         self.lru_pages.set(page_num)
@@ -59,10 +70,13 @@ class BufferPoolManager:
         page_num = page_age_pair[0]
         # if page is dirty and not in use, write to disk
         if self.is_page_dirty(page_num) and self.get_num_pins(page_num) == 0:
+            # Write the page to disk
             self.write_back(pages, page_num)
             # Maybe sent the value in pages to None, so we know that the page is
             # no longer in the bufferpool
             pages[page_num] = None
+            # Page is no longer dirty
+            self.dirty_pages.remove(page_num)
         else:
             if self.get_num_pins(page_num) != 0:
                 print(f"Cannot evict. Page {page_num} is pinned")
@@ -73,18 +87,10 @@ class BufferPoolManager:
         return page_num 
 
     def pin(self, page_num):
-        if page_num == len(self.pinned_pages):
-            self.pinned_pages.append(0)
-        elif page_num < 0 or page_num > len(self.pinned_pages):
-            print(f"Cannot pin page {page_num}")
-        else:
+        if page_num in pinned_pages:
             self.pinned_pages[page_num] += 1
-
-        
-    def unpin(self, page_num):
-        if page_num < 0 or page_num > len(self.pinned_pages):
-            print(f"Cannot pin page {page_num}")
         else:
-            self.pinned_pages[page_num] -= 1 
-        
+            self.pinned_pages[page_num] = 1
 
+    def unpin(self, page_num):
+        self.pinned_pages[page_num] -= 1 
