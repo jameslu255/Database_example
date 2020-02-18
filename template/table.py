@@ -1,5 +1,6 @@
 from template.page import *
 from template.page_range import *
+from template.index import *
 
 from time import time
 
@@ -30,6 +31,7 @@ class Table:
         self.name = name
         self.key = key
         self.num_columns = num_columns
+        self.index = Index(num_columns)
         # SID -> RID
         self.keys = {}
         # RID -> Page

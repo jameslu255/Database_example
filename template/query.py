@@ -85,6 +85,11 @@ class Query:
         # add each column's value to the respective page
         for x in range(len(columns)):
             self.table.update_base_page(x + 4, columns[x], rid)
+            if x != 0:
+                # subtract 1 from x because we want to start with assignment 1
+                Index.add_values(self, x, columns[x], rid)
+            else:
+                Index.create_dictionary(self, x, columns[x], rid)
         
         # grab current page range 
         # pr_id = rid_base // (max_page_size / 8)
@@ -233,7 +238,6 @@ class Query:
         # get relative rid to new page range since it starts at 0
         rid_offset = rid_base - (512 * pr_id)
 
-
         # If there are no tail pages (i.e. first update performed)
         # initiate new tail pages if tail page array empty
         # if len(self.table.tail_pages) == 0: #tail page list empty
@@ -332,6 +336,9 @@ class Query:
         for x in range(len(columns)):
             if columns[x] != None:
                 self.table.update_tail_page(x + 4, columns[x], rid_base)
+                base_page_num = self.table.base_page_directory[rid_base][x + 4]
+                base_record_val = cur_pr.base_pages[base_page_num].get_record_int(rid_offset)
+                self.table.index.update_btree(x, base_record_val, rid_base, columns[x])  # james added this
         # Add the indices to the tail page directory
         for x in range(len(columns) + 4):
             # page_index = self.table.free_tail_pages[x]
