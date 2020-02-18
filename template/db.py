@@ -38,6 +38,13 @@ class Database():
             
         self.tables = []
         pass
+        
+    def get_table(self, table_name):
+        for table in self.tables:
+            if table.name == table_name:
+                return table
+        
+        return "error, table not found"
 
     """
     # Creates a new table
