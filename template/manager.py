@@ -25,7 +25,7 @@ class BufferPoolManager:
     manage the Table class (bufferpool).
     """
 
-    def __init__(self.num_columns, filename):
+    def __init__(num_columns, filename):
         self.dirty_pages = set()
         self.pinned_pages = dict()
         self.disk_location = {}
@@ -46,19 +46,43 @@ class BufferPoolManager:
         return self.pinned_pages[page_num]
 
     def write_back(self, pages, page_num): 
-        # append binary code
-        with open(self.filename, "ab") as f:
-            page_num = (pr_id * self.num_columns) + page_num
-            # Get the current number of bytes (start)
-            start_pos = f.tell()
-            # Write the data to file
-            f.write(pages[page_num].data)
-            # Get the current number of bytes (end)
-            end_pos = f.tell()
-            # Store the offsets of the page 
-            self.disk_location[page_num] = (start_pos, end_pos)
-            mm.close()
-    
+        page_num = (pr_id * self.num_columns) + page_num
+        # We have written this page to disk before 
+        if page_num in disk_location:
+            with open(self.filename, "r+b") as f:
+                # Map the file to memory
+                mm = mmap.mmap(f.fileno(), 0)
+                # Get the starting and ending positions of the page
+                start = self.disk_location[page_num][0]
+                # Get the new ending
+                end = start + len(pages[page_num].data)
+                # update the new ending
+                self.disk_location[page_num][1] = end
+                # Write the data to file
+                mm[start:end] = pages[page_num].data
+                mm.close()
+        # We have not written this page to disk before 
+        else:
+            # append binary code
+            with open(self.filename, "ab") as f:
+                # Get the current number of bytes (start)
+                start = f.tell()
+                # Write the data to file
+                f.write(pages[page_num].data)
+                # Get the current number of bytes (end)
+                end = f.tell()
+                # fill in the rest with 0 bytes
+                remaining_bytes = 4096 - len(pages[page_num].data)
+                # If we still have space left, write empty bytes til 4096
+                # The idea is we want to have some cushion if the page needs
+                # to be written to disk again and the page is larger than
+                # what it originally was
+                if remaining_bytes > 0:
+                    f.write(bytes(remaining_bytes))
+                # Store the offsets of the page 
+                self.disk_location[page_num] = (start, end)
+                mm.close()
+        
     def update_page_usage(self, page_num):
         page_num = (pr_id * self.num_columns) + page_num
         self.lru_pages.set(page_num)
