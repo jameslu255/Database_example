@@ -219,6 +219,15 @@ class Table:
                 tail_page = page_range.tail_pages[tail_page_index]
                 # print("tail_page size", tail_page.num_records, "offset", tail_page_offset)
                 tail_data = tail_page.get_record_int(tail_page_offset)
+
+
+                # Get TPS
+                tps_tail_page_index_offset_tuple = tail_page_indices[TPS_COLUMN]
+                tps_tail_page_index = tps_tail_page_index_offset_tuple[0]
+                tps_tail_page_offset = tps_tail_page_index_offset_tuple[1]
+                tps_tail_page = page_range.tail_pages[tps_tail_page_index]
+                tps_tail_data = tps_tail_page.get_record_int(tps_tail_page_offset)
+
                 if (tail_page_offset == 0):  # there's supposed to be somethinghere but its the wrong tail page
                     # we are in the right column, but the wrong tail page associated with it
                     # this is probably because of the indirection value was not dealt with before
