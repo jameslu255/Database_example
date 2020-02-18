@@ -2,11 +2,6 @@ from template.page_range import *
 import pickle
 import os
 
-# test disk
-# from template.db import Database
-# from template.query import Query
-# from random import choice, randint, sample, seed
-
 
 """
  encode page range object into a file called disk
@@ -80,56 +75,3 @@ class Disk:
         # for i, x in enumerate(arr):
             # if x.id_num == cur_pr_id: #match page range id
                 # arr[table_id][i] = pageRange #replace the page page range
-        
-        
-# # test disk
-# d = Disk("disk")
-# db = Database()
-# grades_table = db.create_table('Grades', 5, 0)
-# table_temp = db.create_table('test', 5, 0)
-# query = Query(grades_table)
-# query_temp = Query(table_temp)
-
-# # insert things so there are at least two pages
-# records = {}
-# seed(3562901)
-# for i in range(0, 1000):
-    # key = 92106429 + i
-    # records[key] = [key, randint(0, 20), randint(0, 20), randint(0, 20), randint(0, 20)]
-    # query.insert(*records[key])
-# keys = sorted(list(records.keys()))
-# query.update(92106429, *[None, None, None, None, 69])
-
-# records = {}
-# for i in range(0, 50):
-    # key = 92106429 + i
-    # records[key] = [key, randint(0, 20), randint(0, 20), randint(0, 20), randint(0, 20)]
-    # query_temp.insert(*records[key])
-# keys = sorted(list(records.keys()))
-# print("Insert finished")
-# query_temp.update(92106429, *[None, None, None, None, 69])
-# query_temp.update(92106429, *[None, None, None, None, 70])
-
-# # write the page ranges in grades_table into disk 
-# d.encode_table(grades_table)
-# d.encode_table(table_temp)
-# # for pr in grades_table.page_ranges:
-    # # d.encode_page_range(pr, grades_table.table_id)
-    
-# # for pr in table_temp.page_ranges:
-    # # d.encode_page_range(pr, table_temp.table_id)
-
-# # read the page ranges in disk
-# print("----------------base page-------------------------")
-# print("         0          1          2          3          4          5          6          7          8")
-# table_dict = d.decode()
-# for key in table_dict:
-    # print("table id is " + str(key))
-    # for (i,y) in enumerate(table_dict[key]):
-        # print("page range #" + str(i))
-        # for x in range(y.base_pages[0].num_records):
-            # for (page_num, page) in enumerate(y.base_pages):
-                # byteval = page.data[x*8:(x*8 + 8)]
-                # val = int.from_bytes(byteval, "big")
-                # print("{0: 10d}".format(val), end = ' ')
-            # print()
