@@ -193,6 +193,8 @@ class Table:
         schema_data_int = schema_page.get_record_int(offset)
 
         # Get desired columns' page indices
+        data = []
+        tps = None
         columns = []
         for i in range(len(query_columns)):
             # Check schema (base page or tail page?)
@@ -243,12 +245,23 @@ class Table:
                         tail_data = tail_page.get_record_int(correct_tail_page[1])
                         # print("correct tail page data is in index",correct_tail_page[0],correct_tail_page[1])
 
+                        # Get TPS from same TPS page at same offset that tail_data is coming from
+                        correct_tps_tail_page = self.tail_page_directory[indirection_value][TPS_COLUMN]
+                        tps_tail_page = page_range.tail_pages[correct_tps_tail_page[0]]
+                        tps_tail_data = tps_tail_page.get_record_int(correct_tps_tail_page[1])
+
+                # Append found most recent data to columns
                 columns.append(tail_data)
-        # Change this to return [TPD, Record]
-        # Element [0] TPS
-        # Element [1] is the Record
-        record = [Record(rid, key, columns)]
-        return record
+
+                # Find most recent update TPS
+                current_tps = tps_tail_data
+                if current_tps > tps:
+                    tps = current_tps
+
+        record = Record(rid, key, columns)
+        data.append(tps)
+        data.append(record)
+        return data
 
 
 
