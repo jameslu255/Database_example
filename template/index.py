@@ -56,13 +56,9 @@ class Index:
                 print("Assignment " + str(i))
                 for pair in (btree_list[i].iteritems()):
                     print("Score: " + str(pair[0]) + ", RID: " + str(pair[1]))
-    """
-    def get_value(self, assignment_num, key):
-        if (key > 0 and key <= self.table.base_rid):
-            return btree_list[assignment_num].get(key, -1)
-        else:
-            return 0
-        """
+
+    def get_value(self, column_num, key):
+        return btree_list[column_num].get(key, "Key not found")
 
     """
     # returns the location of all records with the given value
