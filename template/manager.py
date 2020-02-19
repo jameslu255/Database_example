@@ -7,14 +7,12 @@ import collections
 class LRUCache:
     def __init__(self):
         self.cache = collections.OrderedDict()
-        self.age = 0
 
-    def set(self, key):
-        self.age += 1
+    def set(self, key, val):
         try:
             self.cache.pop(key)
         finally:
-            self.cache[key] = self.age 
+            self.cache[key] = val
 
     def find_lru():
         return self.cache.popitem(last=False)
@@ -34,19 +32,17 @@ class BufferPoolManager:
         self.num_columns = num_columns
 
     def set_page_dirty(self, pr_id, page_num):
+        # Transform the page number to increase with the page range
         page_num = (pr_id * self.num_columns) + page_num
         self.dirty_pages.add(page_num)
 
     def is_page_dirty(self, page_num):
-        page_num = (pr_id * self.num_columns) + page_num
         return page_num in self.dirty_pages
 
     def get_num_pins(self, page_num):
-        page_num = (pr_id * self.num_columns) + page_num
         return self.pinned_pages[page_num]
 
     def write_back(self, pages, page_num): 
-        page_num = (pr_id * self.num_columns) + page_num
         # We have written this page to disk before 
         if page_num in disk_location:
             with open(self.filename, "r+b") as f:
@@ -81,34 +77,39 @@ class BufferPoolManager:
                     f.write(bytes(remaining_bytes))
                 # Store the offsets of the page 
                 self.disk_location[page_num] = (start, end)
-                mm.close()
         
-    def update_page_usage(self, page_num):
+    def update_page_usage(self, pr_id, page_num):
+        # Transform the page number to increase with the page range
         page_num = (pr_id * self.num_columns) + page_num
-        self.lru_pages.set(page_num)
+        self.lru_pages.set(page_num, pr_id)
 
-    def evict(self, pages):
+    def evict(self, page_ranges):
         """
         Choose a page to evict using LRU policy. Write to disk if page 
         is dirty
         """
         # Find a page to evict. Note that this will remove the page from the
         # cache 
-        page_age_pair = self.find_lru()
-        if page_age_pair == None: 
+        page_pair = self.find_lru()
+        if page_pair == None: 
             print("Could not find page to evict")
             return -1
 
         # The LRU page number
         page_num = page_age_pair[0]
-        page_num = (pr_id * self.num_columns) + page_num
+        pr_id = page_age_pair[1]
+        # Find the index of the page relative to the page range
+        page_relative_idx = page_num - (pr_id * self.num_columns) 
+        # Get the pages
+        curr_pages = page_range[pr_id]
+
         # if page is dirty and not in use, write to disk
         if self.is_page_dirty(page_num) and self.get_num_pins(page_num) == 0:
             # Write the page to disk
-            self.write_back(pages, page_num)
+            self.write_back(curr_pages, page_relative_idx)
             # Maybe sent the value in pages to None, so we know that the page is
             # no longer in the bufferpool
-            pages[page_num] = None
+            curr_pages[page_relative_idx] = None
             # Page is no longer dirty
             self.dirty_pages.remove(page_num)
         else:
@@ -138,7 +139,8 @@ class BufferPoolManager:
             mm.close()
             return page
     
-    def pin(self, page_num):
+    def pin(self, pr_id, page_num):
+        # Transform the page number to increase with the page range
         page_num = (pr_id * self.num_columns) + page_num
         if page_num in pinned_pages:
             self.pinned_pages[page_num] += 1
