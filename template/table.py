@@ -86,6 +86,29 @@ class Table:
     def __merge(self, page_range):
 
         # GAME PLAN:
+
+        # 1. Identify committed tail records in tail pages
+        #    What:  Select a set of consecutive fully committed tail records (or pages) since the last merge within each update range.
+        #    How: Create a queue to hold committed tail records (or pages) then use while loop to merge while queue is not empty.
+        # 2. Load the corresponding outdated base pages
+        #    What:
+        #    How:
+        # 3. Consolidate the base and tail pages (MERGE)
+        # 4. Update the page directory
+        # 5. De-allocate the outdated base pages
+
+        # NOTES:
+
+        # 1. Writers append new uncommitted tail records to tail pages,
+        # but as stated before uncommitted records do not participate in the merge.
+
+        # 2. Writers also perform in-place update of the Indirection column within base
+        # records to point to the latest version of the updated records in tail pages,
+        # but the Indirection column is not modified by the merge process
+
+
+
+        # GAME PLAN:
         # Make a copy of the base pages
         # Go through every row (every RID) in the base pages
         # For each row:
