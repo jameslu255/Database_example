@@ -129,17 +129,18 @@ class Table:
         tps_page = base_pages_copy[TPS_COLUMN]                  # Get TPS
         key_page = base_pages_copy[KEY_COLUMN]                  # Get keys
 
-        # Get first RID in this page range (just to access base page indices)
-        rid = page_range.id_num * PAGE_RANGE_MAX_RECORDS
-
-        # # Find physical pages' indices for RID from page_directory [RID:[x x x x x]]
-        # base_page_indices = self.table.base_page_directory[rid]
-
+        # First RID in this page range
+        start_rid = page_range.id_num * PAGE_RANGE_MAX_RECORDS
         # Get the number of rows in this page range
         num_rows = rid_page.num_records
+        # Last RID in this page range
+        end_rid = start_rid + num_rows
+
+        # # Find physical pages' indices for RID from page_directory [RID:[x x x x x]]
+        # base_page_indices = self.table.base_page_directory[start_rid]
 
         # Go through every row (every RID)
-        for i in range(rid, num_rows + 1):
+        for i in range(start_rid, end_rid + 1):
             rid_data = rid_page.get_record_int(i)
             if rid_data != 0:
                 indirection = indirection_page.get_record_int(i)
