@@ -119,31 +119,24 @@ class Table:
 
 
         # Copy base pages
+        # [ 0    1     2      3     4    5   6   7 ]
+        # [IND  RID  TIME  SCHEMA  TPS  KEY  G1  G2]
         base_pages_copy = page_range.base_pages.copy()
+
+        # ----- Get a bunch of columns that we need to read info from to perform merge -----
+        rid_page = base_pages_copy[RID_COLUMN]                  # Get RIDs
+        indirection_page = base_pages_copy[INDIRECTION_COLUMN]  # Get Indirection
+        tps_page = base_pages_copy[TPS_COLUMN]                  # Get TPS
+        key_page = base_pages_copy[KEY_COLUMN]                  # Get keys
 
         # Get first RID in this page range (just to access base page indices)
         rid = page_range.id_num * PAGE_RANGE_MAX_RECORDS
 
-        # Find physical pages' indices for RID from page_directory [RID:[x x x x x]]
-        base_page_indices = self.table.base_page_directory[rid]
-        # print(f"Found base pages: {base_page_indices}")
-
-        # ----- Get a bunch of columns that we need to read info from to perform merge -----
-        # Get RIDs
-        rid_page_index = base_page_indices[RID_COLUMN]
-        rid_page = page_range.base_pages[rid_page_index]
-        # Get Indirection
-        indirection_page_index = base_page_indices[INDIRECTION_COLUMN]
-        indirection_page = page_range.base_pages[indirection_page_index]
-        # Get TPS
-        tps_page_index = base_page_indices[TPS_COLUMN]
-        tps_page = page_range.base_pages[tps_page_index]
-        # Get keys
-        key_page_index = base_page_indices[KEY_COLUMN]
-        key_page = page_range.base_pages[key_page_index]
+        # # Find physical pages' indices for RID from page_directory [RID:[x x x x x]]
+        # base_page_indices = self.table.base_page_directory[rid]
 
         # Get the number of rows in this page range
-        num_rows = key_page.num_records
+        num_rows = rid_page.num_records
 
         # Go through every row (every RID)
         for i in range(rid, num_rows + 1):
@@ -151,7 +144,7 @@ class Table:
             if rid_data != 0:
                 indirection = indirection_page.get_record_int(i)
                 tps = tps_page.get_record_int(i)
-                if indirection > tps:
+                if indirection > tps: # if indirection !> tps --> no need to merge this record (hasn't had new updates)
                     # MERGE
                     # Get key for current RID to call select (get most recent info)
                     key = key_page.get_record_int(i)
