@@ -171,8 +171,7 @@ class Table:
 
     # call example: self.replace(i, base_pages_copy, TPS_COLUMN, new_tps)
     def replace(self, rid, base_pages_copy, column, value):
-        # find offset of item within page to replace
-        # use rid to find the offset within the page
+        # use rid to find the offset of the item within the page to replace
         pr_id = self.get_page_range(rid)
         offset = rid - (PAGE_RANGE_MAX_RECORDS * pr_id)
 
