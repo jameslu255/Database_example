@@ -144,14 +144,17 @@ class Table:
             if rid_data != 0:
                 indirection = indirection_page.get_record_int(i)
                 tps = tps_page.get_record_int(i)
+
+                # MERGE
                 if indirection > tps: # if indirection !> tps --> no need to merge this record (hasn't had new updates)
-                    # MERGE
-                    # Get key for current RID to call select (get most recent info)
+
+                    # ----- Set Up to call select -----
                     key = key_page.get_record_int(i)
                     query_columns = []
                     for j in range(self.num_columns):
                         query_columns.append(1)
-                    # record = [Record(rid, key, columns)] --> always 1 item in array so access it w/ [0]
+
+                    # record = [TPS, Record(rid, key, columns)] --> always 2 items in select return array
                     select_return = self.select_two(key, query_columns)
                     new_tps = select_return[0]
                     record = select_return[1]
