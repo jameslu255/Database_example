@@ -1,6 +1,5 @@
 from template.page import *
 from template.page_range import *
-from template.query import *
 
 from time import time
 
