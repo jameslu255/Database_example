@@ -150,7 +150,7 @@ class Table:
                     # record = [TPS, Record(rid, key, columns)] --> always 2 items in select return array
                     select_return = self.select_two(key, query_columns)
                     new_tps = select_return[0]
-                    record = select_return[1]
+                    columns = select_return[1]
 
                     # Update TPS
                     self.replace(i, base_pages_copy, TPS_COLUMN, new_tps)
@@ -160,7 +160,7 @@ class Table:
                     # column_index is the index of the column that we are merging into
                     # (may need to change to +2 if select doesnt include key in return)
                     column_index = NUM_CONSTANT_COLUMNS + 1
-                    for value in record.columns:
+                    for value in columns:
                         self.replace(i, base_pages_copy, column_index, value)
                         column_index += 1
 
@@ -179,34 +179,18 @@ class Table:
         base_pages_copy[column][offset] = value
 
     # Change so that don't start at very bottom, but rather start at merge point
-    def select_two(self, key, query_columns):
-        if key not in self.keys:
-            return []
-
-        # Find RID from key, keys = {SID: RID}
-        rid = self.keys[key]
-
-        # Find Page Range ID
-        pr_id = rid // (PAGE_RANGE_MAX_RECORDS + 1)
-        page_range = self.page_ranges[pr_id]
-
+    def select_two(self, page_range, rid, query_columns, start_TID, stop_TID, base_pages):
         # get relative rid to new page range since it starts at 0
-        offset = rid - (PAGE_RANGE_MAX_RECORDS * pr_id)
-
-        # Find physical pages' indices for RID from page_directory [RID:[x x x x x]]
-        base_page_indices = self.base_page_directory[rid]
-        # print(f"Found base pages: {base_page_indices}")
+        offset = rid - (PAGE_RANGE_MAX_RECORDS * page_range.id_num)
 
         # Get and check indirection
-        indirection_page_index = base_page_indices[INDIRECTION_COLUMN]
-        indirection_page = page_range.base_pages[indirection_page_index]
+        indirection_page = base_pages[INDIRECTION_COLUMN]
         indirection_data = indirection_page.get_record_int(offset)
         if indirection_data != 0:
             tail_page_indices = self.tail_page_directory[indirection_data]
 
         # Get schema
-        schema_page_index = base_page_indices[SCHEMA_ENCODING_COLUMN]
-        schema_page = page_range.base_pages[schema_page_index]
+        schema_page = base_pages[SCHEMA_ENCODING_COLUMN]
         schema_data_int = schema_page.get_record_int(offset)
 
         # Get desired columns' page indices
@@ -214,18 +198,19 @@ class Table:
         tps = None
         columns = []
         for i in range(len(query_columns)):
-            # Check schema (base page or tail page?)
-            # If base page
+            # Check schema (base page or tail page? --> Has been updated before?)
             has_prev_tail_pages = self.bit_is_set(i + 5, schema_data_int)
+
+            # If base page
             if query_columns[i] == 1 and not has_prev_tail_pages:
-                base_page_index = base_page_indices[i + 5]
-                base_page = page_range.base_pages[base_page_index]
+                base_page = base_pages[i + 5]
                 base_data = base_page.get_record_int(offset)
                 # print("index",i,"appending base data", base_data)
                 columns.append(base_data)
                 # print(f"Column {i+5} -> Base Page Index: {base_page_index} -> Data: {base_data}")
+
             # If tail page
-            elif query_columns[i] == 1 and has_prev_tail_pages:  # query this column, but it's been updated before
+            elif query_columns[i] == 1 and has_prev_tail_pages:
                 # get tail page value of this column
                 # grab index and offset of this tail page
                 column_index = i + 5
@@ -244,8 +229,8 @@ class Table:
                 tps_tail_page = page_range.tail_pages[tps_tail_page_index]
                 tps_tail_data = tps_tail_page.get_record_int(tps_tail_page_offset)
 
-                if (tail_page_offset == 0):  # there's supposed to be somethinghere but its the wrong tail page
-                    # we are in the right column, but the wrong tail page associated with it
+                if (tail_page_offset == 0):  # there's supposed to be something here but its the wrong tail page
+                    # we are in the right column, but the wrong tail page associated with it (spanning new tail pages every time)
                     # this is probably because of the indirection value was not dealt with before
                     # there could be a latest value for a column in a previous tail record
                     offset_exists = tail_page_offset
@@ -259,7 +244,9 @@ class Table:
                         indirection_offset = tp_dir[INDIRECTION_COLUMN][1]
                         indirection_page = page_range.tail_pages[indirection_index]
                         indirection_value = indirection_page.get_record_int(indirection_offset)
-                        if indirection_value == 0:
+
+                        # Break if we reached last merge
+                        if indirection_value == stop_TID:
                             break
                         column_tuple = self.tail_page_directory[indirection_value][column_index]
                         offset_exists = column_tuple[1]
@@ -283,10 +270,14 @@ class Table:
                 if current_tps > tps:
                     tps = current_tps
 
-        record = Record(rid, key, columns)
         data.append(tps)
-        data.append(record)
+        data.append(columns)
         return data
+
+
+    def bit_is_set(self, column, schema_enc):
+        mask = 1 << (NUM_CONSTANT_COLUMNS + self.table.num_columns - column - 1)
+        return schema_enc & mask > 0
 
     def create_tail_page(self, col, base_rid):
         # get the base_page that's getting updated rid (passed in as base_rid)
