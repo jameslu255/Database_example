@@ -193,11 +193,11 @@ class Table:
         rid = self.keys[key]
 
         # Find Page Range ID
-        pr_id = rid // 513
+        pr_id = rid // (PAGE_RANGE_MAX_RECORDS+1)
         page_range = self.page_ranges[pr_id]
 
         # get relative rid to new page range since it starts at 0
-        offset = rid - (512 * pr_id)
+        offset = rid - (PAGE_RANGE_MAX_RECORDS * pr_id)
 
         # Find physical pages' indices for RID from page_directory [RID:[x x x x x]]
         base_page_indices = self.base_page_directory[rid]
