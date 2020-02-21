@@ -338,7 +338,8 @@ class Query:
                 self.table.update_tail_page(x + 4, columns[x], rid_base)
                 base_page_num = self.table.base_page_directory[rid_base][x + 4]
                 base_record_val = cur_pr.base_pages[base_page_num].get_record_int(rid_offset)
-                self.table.index.update_btree(x, base_record_val, rid_base, columns[x])  # james added this
+                if x != 0:
+                    self.table.index.update_btree(x, base_record_val, rid_base, columns[x])  # james added this
         # Add the indices to the tail page directory
         for x in range(len(columns) + 4):
             # page_index = self.table.free_tail_pages[x]
