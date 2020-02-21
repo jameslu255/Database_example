@@ -20,9 +20,6 @@ KEY_COLUMN = 5
 PAGE_RANGE_MAX_RECORDS = 512
 
 
-
-
-
 class Record:
 
     def __init__(self, rid, key, columns):
@@ -32,6 +29,7 @@ class Record:
 
     def __str__(self):
         return f"Record(RID: {self.rid}, Columns: {self.columns})"
+
 
 class Table:
     """
@@ -50,7 +48,7 @@ class Table:
         self.base_page_directory = {}
         # RID -> Page_tail
         self.tail_page_directory = {}
-        
+
         # number of records a table has
         self.base_rid = 0
         # tail page id
@@ -76,12 +74,9 @@ class Table:
         for x in range(num_columns):
             self.create_base_page(x)
 
-
     def get_page_range(self, base_rid):
         pr_id = (base_rid // (PAGE_RANGE_MAX_RECORDS + 1))  # given the base_rid we can find the page range we want
         return self.page_ranges[pr_id]
-
-
 
     def __merge(self, page_range):
 
@@ -106,8 +101,6 @@ class Table:
         # records to point to the latest version of the updated records in tail pages,
         # but the Indirection column is not modified by the merge process
 
-
-
         # GAME PLAN:
         # Make a copy of the base pages
         # Go through every row (every RID) in the base pages
@@ -117,17 +110,16 @@ class Table:
         #         Call select to obtain most recent updates
         #         Modify base pages copy
 
-
         # Copy base pages
         # [ 0    1     2      3     4    5   6   7 ]
         # [IND  RID  TIME  SCHEMA  TPS  KEY  G1  G2]
         base_pages_copy = page_range.base_pages.copy()
 
         # ----- Get a bunch of columns that we need to read info from to perform merge -----
-        rid_page = base_pages_copy[RID_COLUMN]                  # Get RIDs
+        rid_page = base_pages_copy[RID_COLUMN]  # Get RIDs
         indirection_page = base_pages_copy[INDIRECTION_COLUMN]  # Get Indirection
-        tps_page = base_pages_copy[TPS_COLUMN]                  # Get TPS
-        key_page = base_pages_copy[KEY_COLUMN]                  # Get keys
+        tps_page = base_pages_copy[TPS_COLUMN]  # Get TPS
+        key_page = base_pages_copy[KEY_COLUMN]  # Get keys
 
         # First RID in this page range
         start_rid = page_range.id_num * PAGE_RANGE_MAX_RECORDS
@@ -161,7 +153,7 @@ class Table:
                     record = select_return[1]
 
                     # Update TPS
-                    self.replace(i, TPS_COLUMN, new_tps)
+                    self.replace(i, base_pages_copy, TPS_COLUMN, new_tps)
 
                     # Put new values into base pages copy
                     # columns in record object contains the data we want
@@ -169,7 +161,7 @@ class Table:
                     # (may need to change to +2 if select doesnt include key in return)
                     column_index = NUM_CONSTANT_COLUMNS + 1
                     for value in record.columns:
-                        self.replace(i, column_index, value)
+                        self.replace(i, base_pages_copy, column_index, value)
                         column_index += 1
 
         # Update real base pages
@@ -177,9 +169,14 @@ class Table:
         # Update tail directory
         pass
 
+    # call example: self.replace(i, base_pages_copy, TPS_COLUMN, new_tps)
+    def replace(self, rid, base_pages_copy, column, value):
+        # find offset of item within page to replace
+        # use rid to find the offset within the page
+        pr_id = self.get_page_range(rid)
+        offset = rid - (PAGE_RANGE_MAX_RECORDS * pr_id)
 
-    def replace(self, rid, column, value):
-        pass
+        base_pages_copy[column][offset] = value
 
     # Change so that don't start at very bottom, but rather start at merge point
     def select_two(self, key, query_columns):
@@ -190,7 +187,7 @@ class Table:
         rid = self.keys[key]
 
         # Find Page Range ID
-        pr_id = rid // (PAGE_RANGE_MAX_RECORDS+1)
+        pr_id = rid // (PAGE_RANGE_MAX_RECORDS + 1)
         page_range = self.page_ranges[pr_id]
 
         # get relative rid to new page range since it starts at 0
@@ -239,7 +236,6 @@ class Table:
                 tail_page = page_range.tail_pages[tail_page_index]
                 # print("tail_page size", tail_page.num_records, "offset", tail_page_offset)
                 tail_data = tail_page.get_record_int(tail_page_offset)
-
 
                 # Get TPS
                 tps_tail_page_index_offset_tuple = tail_page_indices[TPS_COLUMN]
@@ -292,20 +288,6 @@ class Table:
         data.append(record)
         return data
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     def create_tail_page(self, col, base_rid):
         # get the base_page that's getting updated rid (passed in as base_rid)
         # find the page range that base_page is in
@@ -326,8 +308,6 @@ class Table:
             cur_pr.free_tail_pages[col] = len(cur_pr.tail_pages) - 1
 
         cur_pr.num_tail_pages += 1
-
-
 
     def update_tail_page(self, col, value, base_rid):
         # update the page linked to the col
@@ -352,13 +332,11 @@ class Table:
             cur_pr.free_tail_pages[col] = len(cur_pr.tail_pages) - 1
             # self.free_pages[col].append(len(pages) - 1)
 
-
-
     def update_tail_rid(self, column_index, rid, value, base_rid):
         pr_id = base_rid // (PAGE_RANGE_MAX_RECORDS + 1)
         cur_pr = self.page_ranges[pr_id]
         # if (column_index < 0):
-            # print("updating a rid in tail " + str(column_index) + " out of bounds")
+        # print("updating a rid in tail " + str(column_index) + " out of bounds")
         # print("updating tail rid " + str(rid) + " @ col " + str(column_index) + " with value: " + str(value))
         cur_pr.tail_pages[column_index].set_record(rid, value)
 
@@ -366,12 +344,11 @@ class Table:
         pr_id = rid // (PAGE_RANGE_MAX_RECORDS + 1)
         cur_pr = self.page_ranges[pr_id]
         # if (column_index < 0 or column_index > self.num_columns):
-            # print("updating a rid in base " + str(column_index) + " out of bounds")
+        # print("updating a rid in base " + str(column_index) + " out of bounds")
         # print("updating rid " + str(rid) + " @ col " + str(column_index) + " with value: " + str(value))
         base_page_index = cur_pr.free_base_pages[column_index]
         base_offset = rid - (PAGE_RANGE_MAX_RECORDS * pr_id)
         cur_pr.base_pages[base_page_index].set_record(base_offset, value)
-
 
     def create_base_page(self, col_name):
         # check current PR can hold more
@@ -385,16 +362,14 @@ class Table:
         cur_pr.base_pages.append(new_page)
         cur_pr.free_base_pages.append(len(cur_pr.base_pages) - 1)
 
-
-
     def update_base_page(self, index, value, rid):
         # print("updating col", index, "with", value, "for rid", rid)
         # update the page linked to the index
         pr_id = rid // (PAGE_RANGE_MAX_RECORDS + 1)
         # index_relative = self.free_base_pages[index]
         # print("pr_id", pr_id)
-        
-        if pr_id >= len(self.page_ranges): #no new page range
+
+        if pr_id >= len(self.page_ranges):  # no new page range
             # make new page range
             # print("making new pange range")
             self.cur_page_range_id += 1  # this pr is full - update the pr id
@@ -403,7 +378,7 @@ class Table:
             # initialize base pages on new pange range creation
             for x in range(self.num_columns + 5):
                 self.create_base_page(x)
-            
+
         pr = self.page_ranges[pr_id]
         index_relative = pr.free_base_pages[index]
         error = pr.base_pages[index_relative].write(value)
@@ -418,11 +393,9 @@ class Table:
             page.write(value)
             pr.base_pages.append(page)
             pr.free_base_pages.append(len(pr.base_pages) - 1)
-            
+
             # increment the num pages count in either case (full or not full since we are adding a new page)
             pr.num_base_pages += 1
-
-
 
     # creates a new page range if the current one gets filled up/does housekeeping stuff (update vals)
     def create_new_pr_if_necessary(self):
@@ -441,4 +414,3 @@ class Table:
         cur_pr = self.page_ranges[self.cur_page_range_id]
         # increment the num pages count in either case (full or not full since we are adding a new page)
         cur_pr.num_base_pages += 1
-
