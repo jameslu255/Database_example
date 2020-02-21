@@ -180,9 +180,10 @@ class Table:
         # Update tail directory
         pass
 
-
-    def replace(self, rid, column, value):
-        pass
+    # call example: self.replace(i, TPS_COLUMN, new_tps)
+    def replace(self, base_page_copy, column, value):
+        # replace original base page with new item
+       pass
 
     # Change so that don't start at very bottom, but rather start at merge point
     def select_two(self, key, query_columns):
