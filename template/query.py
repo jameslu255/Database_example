@@ -141,7 +141,7 @@ class Query:
         for i in range(len(query_columns)):
             # Check schema (base page or tail page?)
             # If base page
-            has_prev_tail_pages = self.bit_is_set(i+NUM_CONSTANT_COLUMNS, schema_data_int)
+            has_prev_tail_pages = self.bit_is_set(i+ NUM_CONSTANT_COLUMNS, schema_data_int)
             if query_columns[i] == 1 and not has_prev_tail_pages:
                 base_page_index = base_page_indices[i+NUM_CONSTANT_COLUMNS]
                 base_page = page_range.base_pages[base_page_index]
@@ -154,7 +154,7 @@ class Query:
                 # get tail page value of this column 
                 # grab index and offset of this tail page
                 column_index = i + NUM_CONSTANT_COLUMNS
-                tail_page_index_offset_tuple = tail_page_indices[i+NUM_CONSTANT_COLUMNS]
+                tail_page_index_offset_tuple = tail_page_indices[i + NUM_CONSTANT_COLUMNS]
                 # print(f"tail_page (page index, offset): {tail_page_index_offset_tuple}")
                 tail_page_index = tail_page_index_offset_tuple[0]
                 tail_page_offset = tail_page_index_offset_tuple[1]
