@@ -81,6 +81,7 @@ class Query:
         self.table.update_base_page(RID_COLUMN, rid, rid)
         self.table.update_base_page(TIMESTAMP_COLUMN, timestamp, rid)
         self.table.update_base_page(SCHEMA_ENCODING_COLUMN, schema_encoding, rid)
+        self.table.update_base_page(TPS_COLUMN, 0, rid)
         
         # add each column's value to the respective page
         for x in range(len(columns)):
@@ -291,6 +292,7 @@ class Query:
                     self.table.create_tail_page(RID_COLUMN, rid_base) 
                     self.table.create_tail_page(TIMESTAMP_COLUMN, rid_base)
                     self.table.create_tail_page(SCHEMA_ENCODING_COLUMN, rid_base)
+                    self.table.create_tail_page(BASE_RID_COLUMN, rid_base)  # index 4
                     for x in range(self.table.num_columns):
                         self.table.create_tail_page(x + NUM_CONSTANT_COLUMNS, rid_base)
                     # Add the indices to the tail page directory
