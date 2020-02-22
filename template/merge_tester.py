@@ -55,7 +55,7 @@ for (i, y) in enumerate(grades_table.page_ranges):
         print()
     print("________________________________________________________________________________________________________")
 # ----------------------------------------------------------------------------------------------------
-print("Inserting 10k records took:  \t\t\t", insert_time_1 - insert_time_0)
+print("Inserting 10 records took:  \t\t\t", insert_time_1 - insert_time_0)
 print()
 
 
@@ -113,27 +113,13 @@ for (i, y) in enumerate(grades_table.page_ranges):
         print()
     print("________________________________________________________________________________________________________")
 # ----------------------------------------------------------------------------------------------------
-print("Updating 10k records took:  \t\t\t", update_time_1 - update_time_0)
+print("Updating 10 records took:  \t\t\t", update_time_1 - update_time_0)
 print()
 
 
-# -------------------- Measuring Select Performance --------------------
-select_time_0 = process_time()
-for i in range(0, 10):
-    query.select(choice(keys), [1, 1, 1])
-select_time_1 = process_time()
-print("Selecting 10k records took:  \t\t\t", select_time_1 - select_time_0)
-
-# -------------------- Measuring Aggregate Performance --------------------
-agg_time_0 = process_time()
-for i in range(0, 10, 1):
-    result = query.sum(i, 1, randrange(0, 3))
-agg_time_1 = process_time()
-print("Aggregate 10k of 100 record batch took:\t", agg_time_1 - agg_time_0)
-
-# -------------------- Measuring Delete Performance --------------------
-delete_time_0 = process_time()
-for i in range(0, 10):
-    query.delete(906659671 + i)
-delete_time_1 = process_time()
-print("Deleting 10k records took:  \t\t\t", delete_time_1 - delete_time_0)
+# # -------------------- Measuring Merge Performance --------------------
+# merge_time_0 = process_time()
+# for i in range(0, 10):
+#     grades_table.merge()
+# merge_time_1 = process_time()
+# print("Merging 10 records took:  \t\t\t", merge_time_1 - merge_time_0)
