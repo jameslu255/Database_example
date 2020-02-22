@@ -42,8 +42,15 @@ class Table:
         # tail page id
         self.tail_rid = 0
 
+        self.capacity = (num_columns + 4) * 4
         # bufferpool size
         self.size = 0
+
+        # BufferPoolManager
+        self.base_page_manager = BufferPoolManager(self.num_columns + 4, 
+                                                    "base_pages.bin")
+        self.tail_page_manager = BufferPoolManager(self.num_columns + 4, 
+                                                    "tail_pages.bin")
 
         # will increment each time we create a new page range (acts as unique ID used to differentiate PR's)
         # also will tell us index of current pr in the pr array
@@ -60,13 +67,7 @@ class Table:
         self.create_base_page("timestamp")  # index 2
         self.create_base_page("schema")  # index 3
 
-        # BufferPoolManager
-        self.capacity = (num_columns + 4) * 4
-        self.base_page_manager = BufferPoolManager(num_columns + 4, 
-                                                    filename = "base_pages.bin")
-        self.tail_page_manager = BufferPoolManager(num_columns + 4, 
-                                                    filename = "tail_pages.bin")
-
+        
         # create pages for the key and the data columns
         for x in range(num_columns):
             self.create_base_page(x)
@@ -78,16 +79,16 @@ class Table:
         return self.size <= self.capacity
 
     def create_tail_page(self, col, base_rid):
-       # Check if we have room for the new page
-        if not self.has_capacity():
-            self.tail_page_manager.evict(self.tail_pages)
-            self.size -= 1
-
         # get the base_page that's getting updated rid (passed in as base_rid)
         # find the page range that base_page is in
         # add the tail page to that page range
         pr_id = (base_rid // (512 + 1))  # given the base_rid we can find the page range we want
         cur_pr = self.page_ranges[pr_id]
+
+        # Check if we have room for the new page
+        if not self.has_capacity():
+            self.tail_page_manager.evict(cur_pr.tail_pages)
+            self.size -= 1
 
         # create the page and push to array holding pages
         new_page = Page()
@@ -120,7 +121,7 @@ class Table:
         if cur_page == None:
             # If we don't have enough space to bring in another page
             if not self.has_capacity():
-                self.tail_page_manager.evict(self.tail_pages)
+                self.tail_page_manager.evict(cur_pr.tail_pages)
                 self.size -= 1
             # Fetch the page from disk
             fetched_page = self.tail_page_manager.fetch(cur_pr.id_num, index_relative)
@@ -132,7 +133,8 @@ class Table:
         if error == -1:  # maximum size reached in page
             # Check if we have room for the new page
             if not self.has_capacity():
-                self.tail_page_manager.evict(self.tail_pages)
+                self.tail_page_manager.evict(cur_pr.tail_pages)
+                self.size -= 1
 
             # create new page
             page = Page()
@@ -171,7 +173,7 @@ class Table:
         if cur_page == None:
             # If we don't have enough space to bring in another page
             if not self.has_capacity():
-                self.tail_page_manager.evict(self.tail_pages)
+                self.tail_page_manager.evict(cur_pr.tail_pages)
                 self.size -= 1
             fetched_page = self.tail_page_manager.fetch(cur_pr.id_num, column_index)
             cur_pr.tail_pages[column_index] = fetched_page
@@ -195,7 +197,7 @@ class Table:
         if cur_page == None:
             # If we don't have enough space to bring in another page
             if not self.has_capacity():
-                self.base_page_manager.evict(self.base_pages)
+                self.base_page_manager.evict(cur_pr.base_pages)
                 self.size -= 1
             fetched_page = self.tail_page_manager.fetch(cur_pr.id_num, base_page_index)
             cur_pr.base_pages[base_page_index] = fetched_page
@@ -211,9 +213,12 @@ class Table:
         cur_page.set_record(base_offset, value)
 
     def create_base_page(self, col_name):
+        # Get the current page range
+        cur_pr = self.page_ranges[self.cur_page_range_id]
+
        # Check if we have room for the new page
         if not self.has_capacity():
-            self.tail_page_manager.evict(self.tail_pages)
+            self.tail_page_manager.evict(cur_pr.base_pages)
             self.size -= 1
 
         # check current PR can hold more
@@ -257,7 +262,7 @@ class Table:
         if cur_page == None:
             # If we don't have enough space to bring in another page
             if not self.has_capacity():
-                self.base_page_manager.evict(self.base_pages)
+                self.base_page_manager.evict(pr.base_pages)
                 self.size -= 1
 
             # Fetch the page
@@ -265,11 +270,11 @@ class Table:
             cur_pr.tail_pages[column_index] = fetched_page
             cur_page = fetched_page
          
-        error = curr_page.write(value)
+        error = cur_page.write(value)
         if error == -1:  # maximum size reached in page
             # Check if we have room for the new page
             if not self.has_capacity():
-                self.base_page_manager.evict(self.base_pages)
+                self.base_page_manager.evict(pr.base_pages)
                 self.size -= 1
 
             # similar to above check if we have space in page range/create if necessary/update

@@ -36,6 +36,16 @@ class Query:
         # get indirection value of the base page 
         indirection_index = self.table.base_page_directory[base_rid][INDIRECTION_COLUMN]
         indirection_page = cur_pr.base_pages[indirection_index]
+        # If page is not in bufferpool, read from disk
+        if (indirection_page == None):
+            # if no space for new page
+            if not self.table.has_capacity():
+                self.table.base_page_manager.evict(cur_pr.base_pages)
+                self.table.size -=1
+            # Fetch page from disk
+            indirection_page = self.table.base_page_manager.fetch(cur_pr.id_num, indirection_index)
+            self.table.size += 1
+
         indirection_value = indirection_page.get_record_int(offset)
         
         if indirection_value == 0:
@@ -54,6 +64,17 @@ class Query:
             indirection_offset = self.table.tail_page_directory[indirection_value][INDIRECTION_COLUMN][1] # offset
             # indirection_page = self.table.tail_pages[indirection_index]
             indirection_page = cur_pr.tail_pages[indirection_index]
+            # If page is not in bufferpool, read from disk
+            if (indirection_page == None):
+            # if no space for new page
+                if not self.table.has_capacity():
+                    self.table.tail_page_manager.evict(cur_pr.tail_pages)
+                    self.table.size -=1
+                # Fetch page from disk
+                indirection_page = self.table.tail_page_manager.fetch(cur_pr.id_num, indirection_index)
+                self.table.size += 1
+
+
             indirection_value = indirection_page.get_record_int(indirection_offset)
             
             # update index to find the previous page for this column
@@ -96,7 +117,6 @@ class Query:
         self.table.keys[key] = self.table.base_rid
         # RID -> page_index
         for x in range(len(columns) + 4):
-            # page_directory_indexes.append(self.table.free_base_pages[x])
             page_directory_indexes.append(cur_pr.free_base_pages[x])
         self.table.base_page_directory[self.table.base_rid] = page_directory_indexes
         pass
@@ -127,13 +147,33 @@ class Query:
         # Get and check indirection
         indirection_page_index = base_page_indices[INDIRECTION_COLUMN]
         indirection_page = page_range.base_pages[indirection_page_index]
+        if (indirection_page == None):
+            # if no space for new page
+            if not self.table.has_capacity():
+                self.table.base_page_manager.evict(page_range.base_pages)
+                self.table.size -=1
+            # Fetch page from disk
+            indirection_page = self.table.base_page_manager.fetch(page_range.id_num, indirection_page_index)
+            self.table.size += 1
+
+
         indirection_data = indirection_page.get_record_int(offset)
         if indirection_data != 0:
             tail_page_indices = self.table.tail_page_directory[indirection_data]
 
+
         # Get schema
         schema_page_index = base_page_indices[SCHEMA_ENCODING_COLUMN]
         schema_page = page_range.base_pages[schema_page_index]
+        if (schema_page == None):
+            # if no space for new page
+            if not self.table.has_capacity():
+                self.table.base_page_manager.evict(page_range.base_pages)
+                self.table.size -=1
+            # Fetch page from disk
+            schema_page = self.table.base_page_manager.fetch(page_range.id_num, schema_page_index)
+            self.table.size += 1
+
         schema_data_int = schema_page.get_record_int(offset)
 
         # Get desired columns' page indices
@@ -145,6 +185,17 @@ class Query:
             if query_columns[i] == 1 and not has_prev_tail_pages:
                 base_page_index = base_page_indices[i+4]
                 base_page = page_range.base_pages[base_page_index]
+                # If page is not in bufferpool, read from disk
+                if (base_page == None):
+                # if no space for new page
+                    if not self.table.has_capacity():
+                        self.table.base_page_manager.evict(page_range.base_pages)
+                        self.table.size -=1
+                    # Fetch page from disk
+                    base_page = self.table.base_page_manager.fetch(page_range.id_num, 
+                                                                    base_page_index)
+                    self.table.size += 1
+
                 base_data = base_page.get_record_int(offset)
                 # print("index",i,"appending base data", base_data)
                 columns.append(base_data)
@@ -159,6 +210,18 @@ class Query:
                 tail_page_index = tail_page_index_offset_tuple[0]
                 tail_page_offset = tail_page_index_offset_tuple[1]
                 tail_page = page_range.tail_pages[tail_page_index]
+
+                # If page is not in bufferpool, read from disk
+                if (tail_page == None):
+                # if no space for new page
+                    if not self.table.has_capacity():
+                        self.table.tail_page_manager.evict(page_range.tail_pages)
+                        self.table.size -=1
+                    # Fetch page from disk
+                    tail_page = self.table.tail_page_manager.fetch(page_range.id_num, 
+                                                                    tail_page_index)
+                    self.table.size += 1
+
                 # print("tail_page size", tail_page.num_records, "offset", tail_page_offset)
                 tail_data = tail_page.get_record_int(tail_page_offset)
                 if(tail_page_offset == 0): #there's supposed to be somethinghere but its the wrong tail page
@@ -175,6 +238,16 @@ class Query:
                         indirection_index = tp_dir[INDIRECTION_COLUMN][0]
                         indirection_offset = tp_dir[INDIRECTION_COLUMN][1]
                         indirection_page = page_range.tail_pages[indirection_index]
+                        if (indirection_page == None):
+                            # if no space for new page
+                            if not self.table.has_capacity():
+                                self.table.tail_page_manager.evict(page_range.tail_pages)
+                                self.table.size -=1
+                            # Fetch page from disk
+                            indirection_page = self.table.tail_page_manager.fetch(page_range.id_num, 
+                                                                                    indirection_index)
+                            self.table.size += 1
+
                         indirection_value  = indirection_page.get_record_int(indirection_offset)
                         if indirection_value == 0:
                             break
@@ -184,6 +257,17 @@ class Query:
                     if(offset_exists != 0): #there exists something in this page
                         correct_tail_page = self.table.tail_page_directory[indirection_value][column_index]
                         tail_page = page_range.tail_pages[correct_tail_page[0]]
+                        # If page is not in bufferpool, read from disk
+                        if (tail_page == None):
+                            # if no space for new page
+                            if not self.table.has_capacity():
+                                self.table.tail_page_manager.evict(page_range.tail_pages)
+                                self.table.size -=1
+                            # Fetch page from disk
+                            tail_page = self.table.tail_page_manager.fetch(page_range.id_num, 
+                                                                            correct_tail_page[0])
+                            self.table.size += 1
+
                         tail_data = tail_page.get_record_int(correct_tail_page[1])
                         # print("correct tail page data is in index",correct_tail_page[0],correct_tail_page[1])
 
@@ -249,6 +333,15 @@ class Query:
             for x in range(len(columns) + 4):
                 page_index = cur_pr.free_tail_pages[x]
                 page = cur_pr.tail_pages[page_index]
+                # If page is not in bufferpool, read from disk
+                if (page == None):
+                    # if no space for new page
+                    if not self.table.has_capacity():
+                        self.table.tail_page_manager.evict(cur_pr.tail_pages)
+                        self.table.size -=1
+                    # Fetch page from disk
+                    page = self.table.tail_page_manager.fetch(cur_pr.id_num, page_index)
+                    self.table.size += 1
                 tail_page_directory.append((page_index, page.num_records))
                 # tail_page_directory.append(self.table.free_tail_pages[x])
             # update tail page directory
@@ -263,6 +356,17 @@ class Query:
             
             # indirection_base_page = self.table.base_pages[indirection_base_index]
             indirection_base_page = cur_pr.base_pages[indirection_base_index]
+            # If page is not in bufferpool, read from disk
+            if (indirection_base_page == None):
+                # if no space for new page
+                if not self.table.has_capacity():
+                    self.table.tail_page_manager.evict(page_range.tail_pages)
+                    self.table.size -=1
+                # Fetch page from disk
+                indirection_base_page = self.table.tail_page_manager.fetch(cur_pr.id_num, 
+                                                                            indirection_base_index)
+                self.table.size += 1
+
             indirection_value = indirection_base_page.get_record_int(rid_offset)
             indirection = indirection_value
 
@@ -276,6 +380,16 @@ class Query:
                 offset = matching_tail_pages[SCHEMA_ENCODING_COLUMN][1]
                 # schema_tail_page = self.table.tail_pages[schema_tail_page_index]
                 schema_tail_page = cur_pr.tail_pages[schema_tail_page_index]
+                # If page is not in bufferpool, read from disk
+                if (schema_tail_page == None):
+                    # if no space for new page
+                    if not self.table.has_capacity():
+                        self.table.tail_page_manager.evict(cur_pr.tail_pages)
+                        self.table.size -= 1
+                    # Fetch page from disk
+                    schema_tail_page = self.table.tail_page_manager.fetch(cur_pr.id_num, 
+                                                                schema_tail_page_index)
+                    self.table.size += 1
                 # print("indirection value: ", indirection_value)
                 # Get the schema encoding of the latest tail page
                 latest_schema = schema_tail_page.get_record_int(offset)
@@ -291,10 +405,18 @@ class Query:
                         self.table.create_tail_page(x + 4, rid_base)
                     # Add the indices to the tail page directory
                     for x in range(len(columns) + 4):
-                        # page_index = self.table.free_tail_pages[x]
                         page_index = cur_pr.free_tail_pages[x]
-                        # page = self.table.tail_pages[page_index]
                         page = cur_pr.tail_pages[page_index]
+                        # If page is not in bufferpool, read from disk
+                        if (page == None):
+                            # if no space for new page
+                            if not self.table.has_capacity():
+                                self.table.tail_page_manager.evict(cur_pr.tail_pages)
+                                self.table.size -=1
+                            # Fetch page from disk
+                            page = self.table.tail_page_manager.fetch(cur_pr.id_num, page_index)
+                            self.table.size += 1
+
                         tail_page_directory.append((page_index, page.num_records))
                         # tail_page_directory.append(self.table.free_tail_pages[x])
                     # update tail page directory
@@ -310,6 +432,16 @@ class Query:
             base_page_index = self.table.base_page_directory[rid_base][x]
             # base_page = self.table.base_pages[base_page_index]
             base_page = cur_pr.base_pages[base_page_index]
+            if (base_page == None):
+                # if no space for new page
+                if not self.table.has_capacity():
+                    self.table.base_page_manager.evict(cur_pr.base_pages)
+                    self.table.size -=1
+                    # Fetch page from disk
+                page = self.table.base_page_manager.fetch(cur_pr.id_num, base_page_index)
+                self.table.size += 1
+
+
             base_value= base_page.get_record_int(rid_offset)
             if x == INDIRECTION_COLUMN:
                 schema_encoding += str(int(indirection == base_value))
@@ -334,10 +466,19 @@ class Query:
                 self.table.update_tail_page(x + 4, columns[x], rid_base)
         # Add the indices to the tail page directory
         for x in range(len(columns) + 4):
-            # page_index = self.table.free_tail_pages[x]
             page_index = cur_pr.free_tail_pages[x]
-            # page = self.table.tail_pages[page_index]
             page = cur_pr.tail_pages[page_index]
+            # If page is not in bufferpool, read from disk
+            if (page == None):
+                # if no space for new page
+                if not self.table.has_capacity():
+                    self.table.tail_page_manager.evict(cur_pr.tail_pages)
+                    self.table.size -=1
+                # Fetch page from disk
+                page = self.table.tail_page_manager.fetch(cur_pr.id_num, page_index)
+                self.table.size += 1
+
+
             tail_page_directory.append((page_index, page.num_records))
         # update tail page directory
         # set map of RID -> tail page indexes

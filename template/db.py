@@ -1,4 +1,5 @@
 from template.table import Table
+import os
 
 class Database():
 
@@ -7,7 +8,10 @@ class Database():
         pass
 
     def open(self):
-        pass
+        if os.path.exists("base_pages.bin"):
+            os.remove("base_pages.bin")
+        if os.path.exists("tail_pages.bin"):
+            os.remove("tail_pages.bin")
 
     def close(self):
         pass

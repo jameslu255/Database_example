@@ -8,6 +8,10 @@ class Page:
         self.num_records = 0
         self.data = bytearray()
 
+    def __str__(self): 
+        return f"Page(num_records = {self.num_records}, data = {self.data}"
+
+
     def has_capacity(self):
         return (4096 - 8 * self.num_records) > 0
 
