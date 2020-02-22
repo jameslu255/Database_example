@@ -26,6 +26,7 @@ class Index:
         btree_list[column_num].insert(key, value)
 
     def update_btree(self, column_num, key, value, new_key):
+        print(column_num)
         print("Student score is " + str(key) + " and RID of student is " + str(value) + " and new score is " + str(new_key))
         current_list = btree_list[column_num].get(key, "key not found")
         print("Students that got score at " + str(key) + " is " + str(current_list))
