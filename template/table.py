@@ -196,12 +196,13 @@ class Table:
         tps = None
         columns = []
         for i in range(len(query_columns)):
+            column_index = i + NUM_CONSTANT_COLUMNS
             # Check schema (base page or tail page? --> Has been updated before?)
-            has_prev_tail_pages = self.bit_is_set(i + 5, schema_data_int)
+            has_prev_tail_pages = self.bit_is_set(column_index, schema_data_int)
 
             # If base page
             if query_columns[i] == 1 and not has_prev_tail_pages:
-                base_page = base_pages[i + 5]
+                base_page = base_pages[column_index]
                 base_data = base_page.get_record_int(offset)
                 # print("index",i,"appending base data", base_data)
                 columns.append(base_data)
@@ -211,8 +212,7 @@ class Table:
             elif query_columns[i] == 1 and has_prev_tail_pages:
                 # get tail page value of this column
                 # grab index and offset of this tail page
-                column_index = i + 5
-                tail_page_index_offset_tuple = tail_page_indices[i + 5]
+                tail_page_index_offset_tuple = tail_page_indices[column_index]
                 # print(f"tail_page (page index, offset): {tail_page_index_offset_tuple}")
                 tail_page_index = tail_page_index_offset_tuple[0]
                 tail_page_offset = tail_page_index_offset_tuple[1]
@@ -227,16 +227,11 @@ class Table:
                 tps_tail_page = page_range.tail_pages[tps_tail_page_index]
                 tps_tail_data = tps_tail_page.get_record_int(tps_tail_page_offset)
 
-                if (tail_page_offset == 0):  # there's supposed to be something here but its the wrong tail page
+                if (tail_page_offset == 0):
                     # we are in the right column, but the wrong tail page associated with it (spanning new tail pages every time)
-                    # this is probably because of the indirection value was not dealt with before
-                    # there could be a latest value for a column in a previous tail record
                     offset_exists = tail_page_offset
                     indirection_value = indirection_data
                     while (offset_exists == 0):  # while the current tail page doesn't have a value
-                        # get the right number in the right tail record
-                        # update tail directory with the indirection value of this current tail page
-                        # make sure to find the right indirection value
                         tp_dir = self.tail_page_directory[indirection_value]
                         indirection_index = tp_dir[INDIRECTION_COLUMN][0]
                         indirection_offset = tp_dir[INDIRECTION_COLUMN][1]
@@ -262,12 +257,11 @@ class Table:
 
                 # Append found most recent data to columns
                 columns.append(tail_data)
-
                 # Find most recent update TPS
                 current_tps = tps_tail_data
                 if current_tps > tps:
                     tps = current_tps
-
+        # [TPS_value, [data_value1 data_value2 data_value3 ...]]
         data.append(tps)
         data.append(columns)
         return data
