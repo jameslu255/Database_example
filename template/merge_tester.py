@@ -32,11 +32,11 @@ for i in range(0, 10):
 insert_time_1 = process_time()
 # -------------------- Print Table --------------------
 for (i, y) in enumerate(grades_table.page_ranges):
+    print("________________________________________________________________________________________________________")
     page_range_header = PAGE_RANGE + str(i)
     print(page_range_header.center(100, ' '))
     print("________________________________________________________________________________________________________")
-    header = BASE_PAGES
-    print(header.center(100, ' '))
+    print(BASE_PAGES.center(100, ' '))
     print(INDIRECTION.center(12, ' '), end='|')
     print(RID.center(12, ' '), end='|')
     print(TIME.center(12, ' '), end='|')
@@ -48,8 +48,8 @@ for (i, y) in enumerate(grades_table.page_ranges):
     print()
     for x in range(y.base_pages[0].num_records):
         for (page_num, page) in enumerate(y.base_pages):
-            byteval = page.data[x*8:(x*8 + 8)]
-            val = int.from_bytes(byteval, "big")
+            byte_val = page.data[x*8:(x*8 + 8)]
+            val = int.from_bytes(byte_val, "big")
             # print("{0: 10d}".format(val), end=' ')
             print(str(val).center(12, ' '), end='|')
         print()
@@ -72,11 +72,11 @@ for i in range(0, 10):
 update_time_1 = process_time()
 # -------------------- Print Table --------------------
 for (i, y) in enumerate(grades_table.page_ranges):
+    print("________________________________________________________________________________________________________")
     page_range_header = PAGE_RANGE + str(i)
     print(page_range_header.center(100, ' '))
     print("________________________________________________________________________________________________________")
-    header = BASE_PAGES
-    print(header.center(100, ' '))
+    print(BASE_PAGES.center(100, ' '))
     print(INDIRECTION.center(12, ' '), end='|')
     print(RID.center(12, ' '), end='|')
     print(TIME.center(12, ' '), end='|')
@@ -88,39 +88,40 @@ for (i, y) in enumerate(grades_table.page_ranges):
     print()
     for x in range(y.base_pages[0].num_records):
         for (page_num, page) in enumerate(y.base_pages):
-            byteval = page.data[x*8:(x*8 + 8)]
-            val = int.from_bytes(byteval, "big")
+            byte_val = page.data[x*8:(x*8 + 8)]
+            val = int.from_bytes(byte_val, "big")
             # print("{0: 10d}".format(val), end=' ')
             print(str(val).center(12, ' '), end='|')
         print()
-    print("________________________________________________________________________________________________________")
-    header = TAIL_PAGE
-    print(header.center(100, ' '))
-    print(INDIRECTION.center(12, ' '), end='|')
-    print(RID.center(12, ' '), end='|')
-    print(TIME.center(12, ' '), end='|')
-    print(SCHEMA.center(12, ' '), end='|')
-    print(BASE_RID.center(12, ' '), end='|')
-    print(KEY.center(12, ' '), end='|')
-    print(G1.center(12, ' '), end='|')
-    print(G2.center(12, ' '), end='|')
-    print()
+    # print("________________________________________________________________________________________________________")
 
     num_tail_pages = len(y.tail_pages)
-    print("num_tail_pages: " + str(num_tail_pages))
-    num_tail_page_sets = num_tail_pages / (grades_table.num_columns + 5)
-    print("num_tail_page_sets: " + str(num_tail_page_sets))
-    current_tail_page = y.tail_pages[0]
-    # for n in range(num_tail_page_sets):
-    #     for x in
-
-    count = 0
-    for x in range(y.tail_pages[0].num_records):
-        for (page_num, page) in enumerate(y.tail_pages):
-            byteval = page.data[x*8:(x*8 + 8)]
-            val = int.from_bytes(byteval, "big")
-            print(str(val).center(12, ' '), end='|')
+    num_tail_page_sets = int(num_tail_pages / (grades_table.num_columns + 5))
+    tail_page_set_start = 0
+    tail_page_set_end = 7
+    for n in range(num_tail_page_sets):
+        tail_page_header = TAIL_PAGE + str(n)
+        print(tail_page_header.center(100, ' '))
+        print(INDIRECTION.center(12, ' '), end='|')
+        print(RID.center(12, ' '), end='|')
+        print(TIME.center(12, ' '), end='|')
+        print(SCHEMA.center(12, ' '), end='|')
+        print(BASE_RID.center(12, ' '), end='|')
+        print(KEY.center(12, ' '), end='|')
+        print(G1.center(12, ' '), end='|')
+        print(G2.center(12, ' '), end='|')
         print()
+        current_tail_page = y.tail_pages[tail_page_set_start]
+        for x in range(current_tail_page.num_records):
+            for (page_num, page) in enumerate(y.tail_pages, start=tail_page_set_start):
+                byte_val = page.data[x * 8:(x * 8 + 8)]
+                val = int.from_bytes(byte_val, "big")
+                print(str(val).center(12, ' '), end='|')
+                if page_num == tail_page_set_end:
+                    break
+            print()
+        tail_page_set_start += 8
+        tail_page_set_end += 8
     print("________________________________________________________________________________________________________")
 # ----------------------------------------------------------------------------------------------------
 print("Updating 10 records took:  \t\t\t", update_time_1 - update_time_0)
