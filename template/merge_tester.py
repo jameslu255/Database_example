@@ -113,7 +113,7 @@ for (i, y) in enumerate(grades_table.page_ranges):
         print()
         current_tail_page = y.tail_pages[tail_page_set_start]
         for x in range(current_tail_page.num_records):
-            for (page_num, page) in enumerate(y.tail_pages, start=tail_page_set_start):
+            for (page_num, page) in enumerate(y.tail_pages[tail_page_set_start:]):
                 byte_val = page.data[x * 8:(x * 8 + 8)]
                 val = int.from_bytes(byte_val, "big")
                 print(str(val).center(12, ' '), end='|')
