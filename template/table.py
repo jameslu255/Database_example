@@ -318,7 +318,6 @@ class Table:
 
         # Unpin the page
         self.base_page_manager.unpin(pr.id_num, index_relative)
-        error = cur_page.write(value)
         # print("current page range: " + str(cur_pr_id_num))
         if pr.start_rid_base == 0:
             pr.start_rid_base = self.base_rid

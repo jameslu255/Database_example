@@ -244,7 +244,7 @@ class Query:
                 self.table.tail_page_manager.pin(page_range.id_num, tail_page_index)
                 tail_data = tail_page.get_record_int(tail_page_offset)
                 # Unpin the page
-                self.table.tail_page_manager.pin(page_range.id_num, tail_page_index)
+                self.table.tail_page_manager.unpin(page_range.id_num, tail_page_index)
                 if(tail_page_offset == 0): #there's supposed to be somethinghere but its the wrong tail page
                     # we are in the right column, but the wrong tail page associated with it
                     # this is probably because of the indirection value was not dealt with before 

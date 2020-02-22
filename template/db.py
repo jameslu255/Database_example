@@ -14,14 +14,6 @@ class Database():
         pass
 
     def open(self, file_name):
-        #TODO: Read the bufferpool objects from disk and then
-        # remove the two if-statements
-        if os.path.exists("base_pages.bin"):
-            os.remove("base_pages.bin")
-        if os.path.exists("tail_pages.bin"):
-            os.remove("tail_pages.bin")
-
-        # print("open!" + str(len(self.tables)))
         disk = Disk(file_name)
         self.file_name = file_name
         
