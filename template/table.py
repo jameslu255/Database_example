@@ -30,6 +30,7 @@ class Table:
         self.name = name
         self.key = key
         self.num_columns = num_columns
+        
         # SID -> RID
         self.keys = {}
         # RID -> Page
