@@ -63,11 +63,11 @@ class Table:
         self.page_ranges.append(PageRange(self.cur_page_range_id, self.num_columns))
 
         # create pages for the indirection, rid, timestamp, schema encoding column
-        self.create_base_page("indirection")  # index 0
-        self.create_base_page("rid")  # index 1
-        self.create_base_page("timestamp")  # index 2
-        self.create_base_page("schema")  # index 3
-        self.create_base_page("tps")  # index 4
+        self.create_base_page("indirection")    # index 0
+        self.create_base_page("rid")            # index 1
+        self.create_base_page("timestamp")      # index 2
+        self.create_base_page("schema")         # index 3
+        self.create_base_page("tps")            # index 4
 
         # create pages for the key and the data columns
         for x in range(num_columns):
