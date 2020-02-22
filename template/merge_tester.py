@@ -56,7 +56,7 @@ for (i, y) in enumerate(grades_table.page_ranges):
 print("Inserting 10k records took:  \t\t\t", insert_time_1 - insert_time_0)
 
 
-# -------------------- Measuring UPDATE Performance --------------------
+# -------------------- Measuring update Performance --------------------
 update_cols = [
     [randrange(0, 100), None, None],
     [None, randrange(0, 100), None],
@@ -67,45 +67,6 @@ update_time_0 = process_time()
 for i in range(0, 10):
     query.update(choice(keys), *(choice(update_cols)))
 update_time_1 = process_time()
-# -------------------------------------------- Print Table --------------------------------------------
-for (i, y) in enumerate(grades_table.page_ranges):
-    print(PAGE_RANGE + str(i))
-    header = BASE_PAGES
-    print(header.center(100, ' '))
-    print(INDIRECTION.center(12, ' '), end='|')
-    print(RID.center(12, ' '), end='|')
-    print(TIME.center(12, ' '), end='|')
-    print(SCHEMA.center(12, ' '), end='|')
-    print(TPS.center(12, ' '), end='|')
-    print(KEY.center(12, ' '), end='|')
-    print(G1.center(12, ' '), end='|')
-    print(G2.center(12, ' '), end='|')
-    print()
-    for x in range(y.base_pages[0].num_records):
-        for (page_num, page) in enumerate(y.base_pages):
-            byteval = page.data[x*8:(x*8 + 8)]
-            val = int.from_bytes(byteval, "big")
-            # print("{0: 10d}".format(val), end=' ')
-            print(str(val).center(12, ' '), end='|')
-        print()
-    print("________________________________________________________________________________________________________")
-# ----------------------------------------------------------------------------------------------------
-
-print("Inserting 10k records took:  \t\t\t", insert_time_1 - insert_time_0)
-
-# Measuring update Performance
-update_cols = [
-    [randrange(0, 100), None, None],
-    [None, randrange(0, 100), None],
-    [None, None, randrange(0, 100)],
-]
-
-update_time_0 = process_time()
-for i in range(0, 10):
-    query.update(choice(keys), *(choice(update_cols)))
-update_time_1 = process_time()
-print("Updating 10k records took:  \t\t\t", update_time_1 - update_time_0)
-
 # -------------------------------------------- Print Table --------------------------------------------
 for (i, y) in enumerate(grades_table.page_ranges):
     print(PAGE_RANGE + str(i))
