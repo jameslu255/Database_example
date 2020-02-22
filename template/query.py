@@ -1,6 +1,7 @@
 from template.table import *
 from template.index import Index
 import time
+import threading
 
 class Query:
 
@@ -81,7 +82,8 @@ class Query:
         self.table.update_base_page(RID_COLUMN, rid, rid)
         self.table.update_base_page(TIMESTAMP_COLUMN, timestamp, rid)
         self.table.update_base_page(SCHEMA_ENCODING_COLUMN, schema_encoding, rid)
-        
+        self.table.update_base_page(TPS_COLUMN, 0, rid)
+
         # add each column's value to the respective page
         for x in range(len(columns)):
             self.table.update_base_page(x + NUM_CONSTANT_COLUMNS, columns[x], rid)
@@ -357,6 +359,9 @@ class Query:
         self.table.update_base_rid(INDIRECTION_COLUMN, rid_base, rid) #indirection 
         self.table.update_base_rid(SCHEMA_ENCODING_COLUMN, rid_base, new_base_schema_enc)
 
+        # TODO: tentative putting timer stuff here??? not sure idk
+        # timer = threading.Timer(30.0, self.table. __merge(cur_pr))
+        # timer.start()
 
 
     """
