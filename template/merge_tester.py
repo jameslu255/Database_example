@@ -102,6 +102,7 @@ for (i, y) in enumerate(grades_table.page_ranges):
     for n in range(num_tail_page_sets):
         tail_page_header = TAIL_PAGE + str(n)
         print(tail_page_header.center(100, ' '))
+        # print("tail_page_set_start: " + str(tail_page_set_start))
         print(INDIRECTION.center(12, ' '), end='|')
         print(RID.center(12, ' '), end='|')
         print(TIME.center(12, ' '), end='|')
@@ -113,10 +114,12 @@ for (i, y) in enumerate(grades_table.page_ranges):
         print()
         current_tail_page = y.tail_pages[tail_page_set_start]
         for x in range(current_tail_page.num_records):
+            # print("num_records: " + str(current_tail_page.num_records))
             for (page_num, page) in enumerate(y.tail_pages, start=tail_page_set_start):
                 byte_val = page.data[x * 8:(x * 8 + 8)]
                 val = int.from_bytes(byte_val, "big")
                 print(str(val).center(12, ' '), end='|')
+                # print("page_num: " + str(page_num))
                 if page_num == tail_page_set_end:
                     break
             print()
