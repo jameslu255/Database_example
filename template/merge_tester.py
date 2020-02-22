@@ -128,9 +128,8 @@ print("Updating 10 records took:  \t\t\t", update_time_1 - update_time_0)
 print()
 
 
-# # -------------------- Measuring Merge Performance --------------------
-# merge_time_0 = process_time()
-# for i in range(0, 10):
-#     grades_table.merge()
-# merge_time_1 = process_time()
-# print("Merging 10 records took:  \t\t\t", merge_time_1 - merge_time_0)
+# -------------------- Measuring Merge Performance --------------------
+merge_time_0 = process_time()
+grades_table.__merge(grades_table.page_ranges[0])
+merge_time_1 = process_time()
+print("Merging 10 records took:  \t\t\t", merge_time_1 - merge_time_0)
