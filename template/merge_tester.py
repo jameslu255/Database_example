@@ -4,9 +4,9 @@ from time import process_time
 from random import choice, randrange
 
 # Header Constants
-PAGE_RANGE = "PAGE RANGE #"
+PAGE_RANGE = "PAGE RANGE "
 BASE_PAGES = "Base Pages"
-TAIL_PAGES = "Tail Pages"
+TAIL_PAGE = "Tail Page "
 INDIRECTION = "indirection"
 RID = "RID"
 TIME = "time"
@@ -30,9 +30,11 @@ for i in range(0, 10):
     query.insert(906659671 + i, 93, 0)
     keys.append(906659671 + i)
 insert_time_1 = process_time()
-# -------------------------------------------- Print Table --------------------------------------------
+# -------------------- Print Table --------------------
 for (i, y) in enumerate(grades_table.page_ranges):
-    print(PAGE_RANGE + str(i))
+    page_range_header = PAGE_RANGE + str(i)
+    print(page_range_header.center(100, ' '))
+    print("________________________________________________________________________________________________________")
     header = BASE_PAGES
     print(header.center(100, ' '))
     print(INDIRECTION.center(12, ' '), end='|')
@@ -54,6 +56,7 @@ for (i, y) in enumerate(grades_table.page_ranges):
     print("________________________________________________________________________________________________________")
 # ----------------------------------------------------------------------------------------------------
 print("Inserting 10k records took:  \t\t\t", insert_time_1 - insert_time_0)
+print()
 
 
 # -------------------- Measuring update Performance --------------------
@@ -67,9 +70,11 @@ update_time_0 = process_time()
 for i in range(0, 10):
     query.update(choice(keys), *(choice(update_cols)))
 update_time_1 = process_time()
-# -------------------------------------------- Print Table --------------------------------------------
+# -------------------- Print Table --------------------
 for (i, y) in enumerate(grades_table.page_ranges):
-    print(PAGE_RANGE + str(i))
+    page_range_header = PAGE_RANGE + str(i)
+    print(page_range_header.center(100, ' '))
+    print("________________________________________________________________________________________________________")
     header = BASE_PAGES
     print(header.center(100, ' '))
     print(INDIRECTION.center(12, ' '), end='|')
@@ -89,7 +94,7 @@ for (i, y) in enumerate(grades_table.page_ranges):
             print(str(val).center(12, ' '), end='|')
         print()
     print("________________________________________________________________________________________________________")
-    header = TAIL_PAGES
+    header = TAIL_PAGE
     print(header.center(100, ' '))
     print(INDIRECTION.center(12, ' '), end='|')
     print(RID.center(12, ' '), end='|')
@@ -109,6 +114,7 @@ for (i, y) in enumerate(grades_table.page_ranges):
     print("________________________________________________________________________________________________________")
 # ----------------------------------------------------------------------------------------------------
 print("Updating 10k records took:  \t\t\t", update_time_1 - update_time_0)
+print()
 
 
 # -------------------- Measuring Select Performance --------------------
