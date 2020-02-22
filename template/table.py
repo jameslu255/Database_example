@@ -129,7 +129,9 @@ class Table:
             cur_pr.tail_pages[index_relative] = fetched_page
             cur_page = fetched_page
             self.size += 1
-         
+        
+        # Pin the current Page
+        self.tail_page_manager.pin(cur_pr.id_num, index_relative)
         error = cur_page.write(value)
         if error == -1:  # maximum size reached in page
             # Check if we have room for the new page
@@ -160,6 +162,9 @@ class Table:
             # Page is dirty
             self.tail_page_manager.set_page_dirty(cur_pr.id_num, index_relative)
 
+
+        # Unpin the current Page
+        self.tail_page_manager.unpin(cur_pr.id_num, index_relative)
         if cur_pr.end_rid_tail == 0:
             cur_pr.start_rid_tail = self.tail_rid
 
@@ -181,12 +186,16 @@ class Table:
             cur_page = fetched_page
             self.size += 1
             
+        # Pin the current Page
+        self.tail_page_manager.pin(cur_pr.id_num, column_index)
         # Update LRU
         self.tail_page_manager.update_page_usage(cur_pr.id_num, column_index)
         # Page is dirty
         self.tail_page_manager.set_page_dirty(cur_pr.id_num, column_index)
         # Update the page
         cur_page.set_record(rid, value)
+        # Unpin the current Page
+        self.tail_page_manager.unpin(cur_pr.id_num, column_index)
 
     def update_base_rid(self, column_index, rid, value):
         pr_id = rid // (512 + 1)
@@ -203,11 +212,15 @@ class Table:
             fetched_page = self.tail_page_manager.fetch(cur_pr.id_num, base_page_index)
             cur_pr.base_pages[base_page_index] = fetched_page
             cur_page = fetched_page
-         
+        
+        # Pin the page
+        self.base_page_manager.pin(cur_pr.id_num, base_page_index)
         # Update LRU
         self.base_page_manager.update_page_usage(cur_pr.id_num, base_page_index)
         # Page is dirty
         self.base_page_manager.set_page_dirty(cur_pr.id_num, base_page_index)
+        # Unpin the page
+        self.base_page_manager.unpin(cur_pr.id_num, base_page_index)
         # Get the record's offset
         base_offset = rid - (512 * pr_id)
         # Set the record's value
@@ -271,6 +284,8 @@ class Table:
             cur_pr.tail_pages[column_index] = fetched_page
             cur_page = fetched_page
          
+        # Pin the page
+        self.base_page_manager.pin(pr.id_num, index_relative)
         error = cur_page.write(value)
         if error == -1:  # maximum size reached in page
             # Check if we have room for the new page
@@ -300,6 +315,10 @@ class Table:
             # Page is dirty
             self.base_page_manager.set_page_dirty(pr.id_num, index_relative)
 
+
+        # Unpin the page
+        self.base_page_manager.unpin(pr.id_num, index_relative)
+        error = cur_page.write(value)
         # print("current page range: " + str(cur_pr_id_num))
         if pr.start_rid_base == 0:
             pr.start_rid_base = self.base_rid

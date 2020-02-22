@@ -63,7 +63,7 @@ class Database():
     def create_table(self, name, num_columns, key):
         self.num_tables += 1
         
-        table = Table(name, num_columns, key, self.num_tables)
+        table = Table(name, num_columns, key)
         
         self.tables.append(table)
         

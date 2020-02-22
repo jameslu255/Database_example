@@ -46,11 +46,15 @@ class Query:
             indirection_page = self.table.base_page_manager.fetch(cur_pr.id_num, indirection_index)
             self.table.size += 1
 
+        # Pin the current page 
+        self.table.base_page_manager.pin(cur_pr.id_num, indirection_index)
         indirection_value = indirection_page.get_record_int(offset)
         
         if indirection_value == 0:
             return
         
+        # Unpin the current page 
+        self.table.base_page_manager.unpin(cur_pr.id_num, indirection_index)
         # index arithmetic to find the latest tail page and its predecessors
         rid_index = self.table.tail_page_directory[indirection_value][RID_COLUMN][0] # index part of tuple
         
@@ -155,9 +159,12 @@ class Query:
             # Fetch page from disk
             indirection_page = self.table.base_page_manager.fetch(page_range.id_num, indirection_page_index)
             self.table.size += 1
-
-
+        
+        # Pin the page
+        self.table.base_page_manager.pin(page_range.id_num, indirection_page_index)
         indirection_data = indirection_page.get_record_int(offset)
+        # Unpin the page
+        self.table.base_page_manager.unpin(page_range.id_num, indirection_page_index)
         if indirection_data != 0:
             tail_page_indices = self.table.tail_page_directory[indirection_data]
 
@@ -165,6 +172,8 @@ class Query:
         # Get schema
         schema_page_index = base_page_indices[SCHEMA_ENCODING_COLUMN]
         schema_page = page_range.base_pages[schema_page_index]
+        # Pin the page
+        self.table.base_page_manager.pin(page_range.id_num, schema_page_index)
         if (schema_page == None):
             # if no space for new page
             if not self.table.has_capacity():
@@ -176,6 +185,8 @@ class Query:
 
         schema_data_int = schema_page.get_record_int(offset)
 
+        # Unpin the page
+        self.table.base_page_manager.unpin(page_range.id_num, schema_page_index)
         # Get desired columns' page indices
         columns = []
         for i in range(len(query_columns)):
@@ -196,10 +207,16 @@ class Query:
                                                                     base_page_index)
                     self.table.size += 1
 
+                # Pin the page
+                self.table.base_page_manager.pin(page_range.id_num, base_page_index)
+
                 base_data = base_page.get_record_int(offset)
                 # print("index",i,"appending base data", base_data)
                 columns.append(base_data)
                 # print(f"Column {i+4} -> Base Page Index: {base_page_index} -> Data: {base_data}")
+
+                # Unpin the page
+                self.table.base_page_manager.unpin(page_range.id_num, base_page_index)
             # If tail page
             elif query_columns[i] == 1 and has_prev_tail_pages:# query this column, but it's been updated before
                 # get tail page value of this column 
@@ -223,7 +240,11 @@ class Query:
                     self.table.size += 1
 
                 # print("tail_page size", tail_page.num_records, "offset", tail_page_offset)
+                # Pin the page
+                self.table.tail_page_manager.pin(page_range.id_num, tail_page_index)
                 tail_data = tail_page.get_record_int(tail_page_offset)
+                # Unpin the page
+                self.table.tail_page_manager.pin(page_range.id_num, tail_page_index)
                 if(tail_page_offset == 0): #there's supposed to be somethinghere but its the wrong tail page
                     # we are in the right column, but the wrong tail page associated with it
                     # this is probably because of the indirection value was not dealt with before 
@@ -248,7 +269,12 @@ class Query:
                                                                                     indirection_index)
                             self.table.size += 1
 
-                        indirection_value  = indirection_page.get_record_int(indirection_offset)
+                        # Pin the page 
+                        self.table.tail_page_manager.pin(page_range.id_num, indirection_index)
+                        
+                        indirection_value = indirection_page.get_record_int(indirection_offset)
+                        # Unpin the page 
+                        self.table.tail_page_manager.unpin(page_range.id_num, indirection_index)
                         if indirection_value == 0:
                             break
                         column_tuple = self.table.tail_page_directory[indirection_value][column_index]
@@ -267,8 +293,11 @@ class Query:
                             tail_page = self.table.tail_page_manager.fetch(page_range.id_num, 
                                                                             correct_tail_page[0])
                             self.table.size += 1
-
+                        # Pin the page
+                        self.table.tail_page_manager.pin(page_range.id_num, correct_tail_page[0])
                         tail_data = tail_page.get_record_int(correct_tail_page[1])
+                        # Unpin the page
+                        self.table.tail_page_manager.unpin(page_range.id_num, correct_tail_page[0])
                         # print("correct tail page data is in index",correct_tail_page[0],correct_tail_page[1])
 
                 columns.append(tail_data)
@@ -334,6 +363,8 @@ class Query:
                 page_index = cur_pr.free_tail_pages[x]
                 page = cur_pr.tail_pages[page_index]
                 # If page is not in bufferpool, read from disk
+                # Pin the page
+                self.table.tail_page_manager.pin(cur_pr.id_num, page_index)
                 if (page == None):
                     # if no space for new page
                     if not self.table.has_capacity():
@@ -343,6 +374,8 @@ class Query:
                     page = self.table.tail_page_manager.fetch(cur_pr.id_num, page_index)
                     self.table.size += 1
                 tail_page_directory.append((page_index, page.num_records))
+                # Unpin the page
+                self.table.tail_page_manager.unpin(cur_pr.id_num, page_index)
                 # tail_page_directory.append(self.table.free_tail_pages[x])
             # update tail page directory
             self.table.tail_page_directory[rid] = tail_page_directory
@@ -367,8 +400,12 @@ class Query:
                                                                             indirection_base_index)
                 self.table.size += 1
 
+            # Pin the page
+            self.table.tail_page_manager.pin(cur_pr.id_num, indirection_base_index)
             indirection_value = indirection_base_page.get_record_int(rid_offset)
             indirection = indirection_value
+            # Unpin the page
+            self.table.tail_page_manager.unpin(cur_pr.id_num, indirection_base_index)
 
             if(indirection_value != 0): #not a 0 => values has been updated before
                 # check schema encoding to see if there's a previous tail page 
@@ -390,9 +427,15 @@ class Query:
                     schema_tail_page = self.table.tail_page_manager.fetch(cur_pr.id_num, 
                                                                 schema_tail_page_index)
                     self.table.size += 1
+
+                # Pin the page
+                self.table.tail_page_manager.pin(cur_pr.id_num, schema_tail_page_index)
+
                 # print("indirection value: ", indirection_value)
                 # Get the schema encoding of the latest tail page
                 latest_schema = schema_tail_page.get_record_int(offset)
+                # Unpin the page
+                self.table.tail_page_manager.unpin(cur_pr.id_num, schema_tail_page_index)
                 # print("latest_schema: ", latest_schema)
                 if latest_schema > 0: #there is at least one column that's updated
                     # create tail pages for everyone
@@ -417,7 +460,11 @@ class Query:
                             page = self.table.tail_page_manager.fetch(cur_pr.id_num, page_index)
                             self.table.size += 1
 
+                        # Pin the page
+                        self.table.tail_page_manager.pin(cur_pr.id_num, page_index)
                         tail_page_directory.append((page_index, page.num_records))
+                        # Unpin the page
+                        self.table.tail_page_manager.unpin(cur_pr.id_num, page_index)
                         # tail_page_directory.append(self.table.free_tail_pages[x])
                     # update tail page directory
                     # set map of RID -> tail page indexes
@@ -441,8 +488,11 @@ class Query:
                 page = self.table.base_page_manager.fetch(cur_pr.id_num, base_page_index)
                 self.table.size += 1
 
-
+            # pin the page
+            self.table.base_page_manager.pin(cur_pr.id_num, base_page_index)
             base_value= base_page.get_record_int(rid_offset)
+            # Unpin the page
+            self.table.base_page_manager.unpin(cur_pr.id_num, base_page_index)
             if x == INDIRECTION_COLUMN:
                 schema_encoding += str(int(indirection == base_value))
             elif x == RID_COLUMN:
@@ -479,7 +529,11 @@ class Query:
                 self.table.size += 1
 
 
+            # pin the page
+            self.table.tail_page_manager.pin(cur_pr.id_num, page_index)
             tail_page_directory.append((page_index, page.num_records))
+            # Unin the page
+            self.table.tail_page_manager.unpin(cur_pr.id_num, page_index)
         # update tail page directory
         # set map of RID -> tail page indexes
         self.table.tail_page_directory[rid] = tail_page_directory
