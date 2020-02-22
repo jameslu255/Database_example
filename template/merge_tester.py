@@ -105,6 +105,16 @@ for (i, y) in enumerate(grades_table.page_ranges):
     print(G1.center(12, ' '), end='|')
     print(G2.center(12, ' '), end='|')
     print()
+
+    num_tail_pages = len(y.tail_pages)
+    print("num_tail_pages: " + str(num_tail_pages))
+    num_tail_page_sets = num_tail_pages / (grades_table.num_columns + 5)
+    print("num_tail_page_sets: " + str(num_tail_page_sets))
+    current_tail_page = y.tail_pages[0]
+    # for n in range(num_tail_page_sets):
+    #     for x in
+
+    count = 0
     for x in range(y.tail_pages[0].num_records):
         for (page_num, page) in enumerate(y.tail_pages):
             byteval = page.data[x*8:(x*8 + 8)]
