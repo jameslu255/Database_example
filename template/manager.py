@@ -28,15 +28,22 @@ class BufferPoolManager:
     """
 
     def __init__(self, num_columns, filename):
+        # Set of pages that are dirty
         self.dirty_pages = set()
+        # Pages that are dirty
         self.pinned_pages = dict()
-        self.disk_location = {}
+        # Disk Page Number -> Page Range ID
+        self.disk_location = dict() 
+        # Least Recently Used pages
         self.lru_pages = LRUCache()
+        # Filename to store the pages
         self.filename = filename
+        # Number of columns including the reserved columns
         self.num_columns = num_columns
 
     def set_page_dirty(self, pr_id, page_num):
         # Transform the page number to increase with the page range
+        # This gives us the disk page range number
         page_num = (pr_id * self.num_columns) + page_num
         self.dirty_pages.add(page_num)
 
@@ -61,9 +68,9 @@ class BufferPoolManager:
             return False 
 
         # Find the index of the page relative to the page range
+        # in the bufferpool
         page_relative_idx = page_num - (pr_id * self.num_columns) 
 
-        # TODO: we are reading from the wrong array
         # We have written this page to disk before 
         if page_num in self.disk_location:
             with open(self.filename, "r+b") as f:
@@ -102,7 +109,6 @@ class BufferPoolManager:
         return True
         
     def update_page_usage(self, pr_id, page_num):
-        # print(f"Insert PR: {pr_id}, PG: {page_num}")
         # Transform the page number to increase with the page range
         page_num = (pr_id * self.num_columns) + page_num
         self.lru_pages.set(page_num, pr_id)
@@ -122,11 +128,13 @@ class BufferPoolManager:
         return page_pair
 
     def fetch(self, pr_id, page_num):
-        # print(f"Fetching PR: {pr_id}, PG: {page_num}")
-        # Read binary mode. + is necessary for mmap to work
+        # This gives us the disk page range number
         page_num = (pr_id * self.num_columns) + page_num
+        # We assume that if the page is neitehr in the bufferpool
+        # nor disk, it's probably an empty page
         if page_num not in self.disk_location:
             return Page()
+        # Read binary mode. + is necessary for mmap to work
         with open(self.filename, "r+b") as f:
             # Map the file to memory
             mm = mmap.mmap(f.fileno(), 0)
@@ -139,13 +147,13 @@ class BufferPoolManager:
             page.data = bytearray(mm[start: end])
             # Get the number of records
             page.num_records = int(len(page.data) / 8)
-            # print(f"Fetched {page}")
             mm.close()
             return page
     
     def pin(self, pr_id, page_num):
         # Transform the page number to increase with the page range
         page_num = (pr_id * self.num_columns) + page_num
+        # Update the pin count
         if page_num in self.pinned_pages:
             self.pinned_pages[page_num] += 1
         else:
@@ -153,5 +161,6 @@ class BufferPoolManager:
 
     def unpin(self, pr_id, page_num):
         # Transform the page number to increase with the page range
+        page_num = (pr_id * self.num_columns) + page_num
         page_num = (pr_id * self.num_columns) + page_num
         self.pinned_pages[page_num] -= 1 

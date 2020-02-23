@@ -80,21 +80,41 @@ class Table:
         return self.size <= self.capacity
 
     def evict_tail_page(self):
+        """
+        Uses bufferpool manager to evict the least recently used tail page
+        """
+        # Find a tail page to evict
         evictPair = self.tail_page_manager.find_evict()
+        # 0 -> Disk Page Number
+        # 1 -> Page Range ID
         if evictPair != None:
-            writeOK = self.tail_page_manager.write_back(self.page_ranges[evictPair[1]].tail_pages,
+            # Write the tail page to disk if possible
+            self.tail_page_manager.write_back(self.page_ranges[evictPair[1]].tail_pages,
             evictPair[0], evictPair[1])
+            # Convert from disk page number to bufferpool page number
             page_num = evictPair[0] - (evictPair[1] * self.tail_page_manager.num_columns)
+            # Remove the page from the bufferpool
             self.page_ranges[evictPair[1]].tail_pages[page_num] = None
+            # Decrement number of pages in the bufferpool
             self.size -= 1
 
     def evict_base_page(self):
+        """
+        Uses bufferpool manager to evict the least recently used base page
+        """
+        # Find a base page to evict
         evictPair = self.base_page_manager.find_evict()
+        # 0 -> Disk Page Number
+        # 1 -> Page Range ID
         if evictPair != None:
+            # Write the tail page to disk if possible
             self.base_page_manager.write_back(self.page_ranges[evictPair[1]].base_pages,
             evictPair[0], evictPair[1])
+            # Convert from disk page number to bufferpool page number
             page_num = evictPair[0] - (evictPair[1] * self.base_page_manager.num_columns)
+            # Remove the page from the bufferpool
             self.page_ranges[evictPair[1]].base_pages[page_num] = None
+            # Decrement number of pages in the bufferpool
             self.size -= 1
 
     def create_tail_page(self, col, base_rid):
