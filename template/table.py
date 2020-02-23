@@ -1,6 +1,6 @@
 from template.page import *
 from template.page_range import *
-
+import copy
 from time import time
 
 # Column Indices Constants
@@ -90,13 +90,12 @@ class Table:
         # Copy base pages
         # [ 0    1     2      3     4    5   6   7 ]
         # [IND  RID  TIME  SCHEMA  TPS  KEY  G1  G2]
-        base_pages_copy = page_range.base_pages.copy()
+        base_pages_copy = copy.deepcopy(page_range.base_pages)
 
         # Get pages of columns that we need to read info from to perform merge
         rid_page = base_pages_copy[RID_COLUMN]  # Get RIDs
         indirection_page = base_pages_copy[INDIRECTION_COLUMN]  # Get Indirection
         tps_page = base_pages_copy[TPS_COLUMN]  # Get TPS
-        key_page = base_pages_copy[KEY_COLUMN]  # Get keys
 
         # First RID in this page range
         start_rid = page_range.id_num * PAGE_RANGE_MAX_RECORDS
