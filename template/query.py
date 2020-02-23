@@ -218,7 +218,7 @@ class Query:
     # Update a record with specified key and columns
     """
     def update(self, key, *columns):
-        print(f"Update: key = {key} columns = {columns}")
+        # print(f"Update: key = {key} columns = {columns}")
         self.table.tail_rid += 1
         
         # Tail record default values
@@ -331,7 +331,7 @@ class Query:
         ### -------- Possibly change this so that it just puts None into record instead of 0s -------- ###
         for x in range(len(columns)):
             if columns[x] != None:
-                print(f"Appending value {columns[x]} into tail page at index {x + NUM_CONSTANT_COLUMNS}")
+                # print(f"Appending value {columns[x]} into tail page at index {x + NUM_CONSTANT_COLUMNS}")
                 self.table.append_tail_page_record(x + NUM_CONSTANT_COLUMNS, columns[x], rid_base)
         ### ------------------------------------------------------------------------------------------ ###
 

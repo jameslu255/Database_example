@@ -122,7 +122,7 @@ class Table:
                     # Select's return format: [TPS#, columns[]]
                     new_tps = select_return[0]
                     columns = select_return[1]
-                    print(f"Data from select for RID {i}: {columns}")
+                    # print(f"Data from select for RID {i}: {columns}")
 
                     # Update TPS and New Values
                     self.replace(i, base_pages_copy, TPS_COLUMN, new_tps)
