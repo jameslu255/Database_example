@@ -170,10 +170,7 @@ class Table:
 
     # call example: self.replace(i, base_pages_copy, TPS_COLUMN, new_tps)
     def replace(self, rid, base_pages_copy, column_index, value):
-        # use rid to find the offset of the item within the page to replace
-        pr_id = self.get_page_range(rid).id_num
-        offset = rid - (PAGE_RANGE_MAX_RECORDS * pr_id)
-        # base_pages_copy[column][offset] = value
+        # update original base pages for now (testing)
         self.update_base_page(self, column_index, value, rid)
 
     # Change so that don't start at very bottom, but rather start at merge point
