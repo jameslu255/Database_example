@@ -218,6 +218,7 @@ class Query:
     # Update a record with specified key and columns
     """
     def update(self, key, *columns):
+        print(f"Update: key = {key} columns = {columns}")
         self.table.tail_rid += 1
         
         # Tail record default values
@@ -326,9 +327,14 @@ class Query:
         self.table.append_tail_page_record(TIMESTAMP_COLUMN, timestamp, rid_base)
         self.table.append_tail_page_record(SCHEMA_ENCODING_COLUMN, schema_encoding, rid_base)
         self.table.append_tail_page_record(BASE_RID_COLUMN, rid_base, rid_base)
+
+        ### -------- Possibly change this so that it just puts None into record instead of 0s -------- ###
         for x in range(len(columns)):
             if columns[x] != None:
+                print(f"Appending value {columns[x]} into tail page at index {x + NUM_CONSTANT_COLUMNS}")
                 self.table.append_tail_page_record(x + NUM_CONSTANT_COLUMNS, columns[x], rid_base)
+        ### ------------------------------------------------------------------------------------------ ###
+
         # Add the indices to the tail page directory
         for x in range(len(columns) + NUM_CONSTANT_COLUMNS):
             # page_index = self.table.free_tail_pages[x]
