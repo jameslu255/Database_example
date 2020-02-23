@@ -162,5 +162,6 @@ class BufferPoolManager:
     def unpin(self, pr_id, page_num):
         # Transform the page number to increase with the page range
         page_num = (pr_id * self.num_columns) + page_num
-        page_num = (pr_id * self.num_columns) + page_num
+        if page_num not in self.pinned_pages:
+            return
         self.pinned_pages[page_num] -= 1 
