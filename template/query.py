@@ -40,8 +40,7 @@ class Query:
         if (indirection_page == None):
             # if no space for new page
             if not self.table.has_capacity():
-                self.table.base_page_manager.evict(cur_pr.base_pages)
-                self.table.size -=1
+                self.table.evict_base_page()
             # Fetch page from disk
             indirection_page = self.table.base_page_manager.fetch(cur_pr.id_num, indirection_index)
             self.table.size += 1
@@ -72,8 +71,8 @@ class Query:
             if (indirection_page == None):
             # if no space for new page
                 if not self.table.has_capacity():
-                    self.table.tail_page_manager.evict(cur_pr.tail_pages)
-                    self.table.size -=1
+                    self.table.evict_tail_page()
+
                 # Fetch page from disk
                 indirection_page = self.table.tail_page_manager.fetch(cur_pr.id_num, indirection_index)
                 self.table.size += 1
@@ -154,8 +153,7 @@ class Query:
         if (indirection_page == None):
             # if no space for new page
             if not self.table.has_capacity():
-                self.table.base_page_manager.evict(page_range.base_pages)
-                self.table.size -=1
+                self.table.evict_base_page()
             # Fetch page from disk
             indirection_page = self.table.base_page_manager.fetch(page_range.id_num, indirection_page_index)
             self.table.size += 1
@@ -177,8 +175,8 @@ class Query:
         if (schema_page == None):
             # if no space for new page
             if not self.table.has_capacity():
-                self.table.base_page_manager.evict(page_range.base_pages)
-                self.table.size -=1
+                self.table.evict_base_page()
+
             # Fetch page from disk
             schema_page = self.table.base_page_manager.fetch(page_range.id_num, schema_page_index)
             self.table.size += 1
@@ -200,8 +198,8 @@ class Query:
                 if (base_page == None):
                 # if no space for new page
                     if not self.table.has_capacity():
-                        self.table.base_page_manager.evict(page_range.base_pages)
-                        self.table.size -=1
+                        self.table.evict_base_page()
+
                     # Fetch page from disk
                     base_page = self.table.base_page_manager.fetch(page_range.id_num, 
                                                                     base_page_index)
@@ -230,10 +228,9 @@ class Query:
 
                 # If page is not in bufferpool, read from disk
                 if (tail_page == None):
-                # if no space for new page
+                    # if no space for new page
                     if not self.table.has_capacity():
-                        self.table.tail_page_manager.evict(page_range.tail_pages)
-                        self.table.size -=1
+                        self.table.evict_tail_page()
                     # Fetch page from disk
                     tail_page = self.table.tail_page_manager.fetch(page_range.id_num, 
                                                                     tail_page_index)
@@ -262,8 +259,8 @@ class Query:
                         if (indirection_page == None):
                             # if no space for new page
                             if not self.table.has_capacity():
-                                self.table.tail_page_manager.evict(page_range.tail_pages)
-                                self.table.size -=1
+                                self.table.evict_tail_page()
+
                             # Fetch page from disk
                             indirection_page = self.table.tail_page_manager.fetch(page_range.id_num, 
                                                                                     indirection_index)
@@ -271,7 +268,6 @@ class Query:
 
                         # Pin the page 
                         self.table.tail_page_manager.pin(page_range.id_num, indirection_index)
-                        
                         indirection_value = indirection_page.get_record_int(indirection_offset)
                         # Unpin the page 
                         self.table.tail_page_manager.unpin(page_range.id_num, indirection_index)
@@ -287,8 +283,8 @@ class Query:
                         if (tail_page == None):
                             # if no space for new page
                             if not self.table.has_capacity():
-                                self.table.tail_page_manager.evict(page_range.tail_pages)
-                                self.table.size -=1
+                                self.table.evict_tail_page()
+
                             # Fetch page from disk
                             tail_page = self.table.tail_page_manager.fetch(page_range.id_num, 
                                                                             correct_tail_page[0])
@@ -368,8 +364,8 @@ class Query:
                 if (page == None):
                     # if no space for new page
                     if not self.table.has_capacity():
-                        self.table.tail_page_manager.evict(cur_pr.tail_pages)
-                        self.table.size -=1
+                        self.table.evict_tail_page()
+
                     # Fetch page from disk
                     page = self.table.tail_page_manager.fetch(cur_pr.id_num, page_index)
                     self.table.size += 1
@@ -393,19 +389,18 @@ class Query:
             if (indirection_base_page == None):
                 # if no space for new page
                 if not self.table.has_capacity():
-                    self.table.tail_page_manager.evict(page_range.tail_pages)
-                    self.table.size -=1
+                    self.table.evict_base_page()
                 # Fetch page from disk
-                indirection_base_page = self.table.tail_page_manager.fetch(cur_pr.id_num, 
+                indirection_base_page = self.table.base_page_manager.fetch(cur_pr.id_num, 
                                                                             indirection_base_index)
                 self.table.size += 1
 
             # Pin the page
-            self.table.tail_page_manager.pin(cur_pr.id_num, indirection_base_index)
+            self.table.base_page_manager.pin(cur_pr.id_num, indirection_base_index)
             indirection_value = indirection_base_page.get_record_int(rid_offset)
             indirection = indirection_value
             # Unpin the page
-            self.table.tail_page_manager.unpin(cur_pr.id_num, indirection_base_index)
+            self.table.base_page_manager.unpin(cur_pr.id_num, indirection_base_index)
 
             if(indirection_value != 0): #not a 0 => values has been updated before
                 # check schema encoding to see if there's a previous tail page 
@@ -421,8 +416,7 @@ class Query:
                 if (schema_tail_page == None):
                     # if no space for new page
                     if not self.table.has_capacity():
-                        self.table.tail_page_manager.evict(cur_pr.tail_pages)
-                        self.table.size -= 1
+                        self.table.evict_tail_page()
                     # Fetch page from disk
                     schema_tail_page = self.table.tail_page_manager.fetch(cur_pr.id_num, 
                                                                 schema_tail_page_index)
@@ -454,8 +448,7 @@ class Query:
                         if (page == None):
                             # if no space for new page
                             if not self.table.has_capacity():
-                                self.table.tail_page_manager.evict(cur_pr.tail_pages)
-                                self.table.size -=1
+                                self.table.evict_tail_page()
                             # Fetch page from disk
                             page = self.table.tail_page_manager.fetch(cur_pr.id_num, page_index)
                             self.table.size += 1
@@ -482,10 +475,9 @@ class Query:
             if (base_page == None):
                 # if no space for new page
                 if not self.table.has_capacity():
-                    self.table.base_page_manager.evict(cur_pr.base_pages)
-                    self.table.size -=1
+                    self.table.evict_base_page()
                     # Fetch page from disk
-                page = self.table.base_page_manager.fetch(cur_pr.id_num, base_page_index)
+                base_page = self.table.base_page_manager.fetch(cur_pr.id_num, base_page_index)
                 self.table.size += 1
 
             # pin the page
@@ -522,12 +514,10 @@ class Query:
             if (page == None):
                 # if no space for new page
                 if not self.table.has_capacity():
-                    self.table.tail_page_manager.evict(cur_pr.tail_pages)
-                    self.table.size -=1
+                    self.table.evict_tail_page()
                 # Fetch page from disk
                 page = self.table.tail_page_manager.fetch(cur_pr.id_num, page_index)
                 self.table.size += 1
-
 
             # pin the page
             self.table.tail_page_manager.pin(cur_pr.id_num, page_index)

@@ -79,6 +79,24 @@ class Table:
     def has_capacity(self):
         return self.size <= self.capacity
 
+    def evict_tail_page(self):
+        evictPair = self.tail_page_manager.find_evict()
+        if evictPair != None:
+            writeOK = self.tail_page_manager.write_back(self.page_ranges[evictPair[1]].tail_pages,
+            evictPair[0], evictPair[1])
+            page_num = evictPair[0] - (evictPair[1] * self.tail_page_manager.num_columns)
+            self.page_ranges[evictPair[1]].tail_pages[page_num] = None
+            self.size -= 1
+
+    def evict_base_page(self):
+        evictPair = self.base_page_manager.find_evict()
+        if evictPair != None:
+            self.base_page_manager.write_back(self.page_ranges[evictPair[1]].base_pages,
+            evictPair[0], evictPair[1])
+            page_num = evictPair[0] - (evictPair[1] * self.base_page_manager.num_columns)
+            self.page_ranges[evictPair[1]].base_pages[page_num] = None
+            self.size -= 1
+
     def create_tail_page(self, col, base_rid):
         # get the base_page that's getting updated rid (passed in as base_rid)
         # find the page range that base_page is in
@@ -88,9 +106,8 @@ class Table:
 
         # Check if we have room for the new page
         if not self.has_capacity():
-            self.tail_page_manager.evict(cur_pr.tail_pages)
-            self.size -= 1
-
+            self.evict_tail_page()
+        
         # create the page and push to array holding pages
         new_page = Page()
         # Check if we have room for the new page
@@ -122,8 +139,8 @@ class Table:
         if cur_page == None:
             # If we don't have enough space to bring in another page
             if not self.has_capacity():
-                self.tail_page_manager.evict(cur_pr.tail_pages)
-                self.size -= 1
+                self.evict_tail_page()
+                
             # Fetch the page from disk
             fetched_page = self.tail_page_manager.fetch(cur_pr.id_num, index_relative)
             cur_pr.tail_pages[index_relative] = fetched_page
@@ -136,9 +153,8 @@ class Table:
         if error == -1:  # maximum size reached in page
             # Check if we have room for the new page
             if not self.has_capacity():
-                self.tail_page_manager.evict(cur_pr.tail_pages)
-                self.size -= 1
-
+                self.evict_tail_page()
+                
             # create new page
             page = Page()
             self.size += 1
@@ -179,12 +195,12 @@ class Table:
         if cur_page == None:
             # If we don't have enough space to bring in another page
             if not self.has_capacity():
-                self.tail_page_manager.evict(cur_pr.tail_pages)
-                self.size -= 1
-            fetched_page = self.tail_page_manager.fetch(cur_pr.id_num, column_index)
+                self.evict_tail_page()
+
+            fetched_page = self.tail_page_manager.fetch(cur_pr.id_num,
+            column_index)
             cur_pr.tail_pages[column_index] = fetched_page
             cur_page = fetched_page
-            self.size += 1
             
         # Pin the current Page
         self.tail_page_manager.pin(cur_pr.id_num, column_index)
@@ -207,9 +223,9 @@ class Table:
         if cur_page == None:
             # If we don't have enough space to bring in another page
             if not self.has_capacity():
-                self.base_page_manager.evict(cur_pr.base_pages)
-                self.size -= 1
-            fetched_page = self.tail_page_manager.fetch(cur_pr.id_num, base_page_index)
+                self.evict_base_page()
+                
+            fetched_page = self.base_page_manager.fetch(cur_pr.id_num, base_page_index)
             cur_pr.base_pages[base_page_index] = fetched_page
             cur_page = fetched_page
         
@@ -232,9 +248,8 @@ class Table:
 
        # Check if we have room for the new page
         if not self.has_capacity():
-            self.tail_page_manager.evict(cur_pr.base_pages)
-            self.size -= 1
-
+            self.evict_base_page()
+            
         # check current PR can hold more
         self.create_new_pr_if_necessary()
 
@@ -276,12 +291,11 @@ class Table:
         if cur_page == None:
             # If we don't have enough space to bring in another page
             if not self.has_capacity():
-                self.base_page_manager.evict(pr.base_pages)
-                self.size -= 1
-
+                self.evict_base_page()
+                
             # Fetch the page
             fetched_page = self.base_page_manager.fetch(pr.id_num, index_relative)
-            cur_pr.tail_pages[column_index] = fetched_page
+            cur_pr.tail_pages[index_relative] = fetched_page
             cur_page = fetched_page
          
         # Pin the page
@@ -290,9 +304,8 @@ class Table:
         if error == -1:  # maximum size reached in page
             # Check if we have room for the new page
             if not self.has_capacity():
-                self.base_page_manager.evict(pr.base_pages)
-                self.size -= 1
-
+                self.evict_base_page()
+                
             # similar to above check if we have space in page range/create if necessary/update
             # create new page
             page = Page()

@@ -1,5 +1,6 @@
 from template.table import *
 from template.page import *
+from template.page_range import *
 import mmap
 import collections
 
@@ -49,7 +50,20 @@ class BufferPoolManager:
             return 0
         return self.pinned_pages[page_num]
 
-    def write_back(self, pages, page_num): 
+    def write_back(self, pages, page_num, pr_id): 
+        if not self.is_page_dirty(page_num) or self.get_num_pins(page_num) > 0:
+            """
+            if self.get_num_pins(page_num) != 0:
+                print(f"Cannot write back. Page {page_num} is pinned")
+            else:
+                print(f"Cannot write back. Page {page_num} is not dirty")
+            """
+            return False 
+
+        # Find the index of the page relative to the page range
+        page_relative_idx = page_num - (pr_id * self.num_columns) 
+
+        # TODO: we are reading from the wrong array
         # We have written this page to disk before 
         if page_num in self.disk_location:
             with open(self.filename, "r+b") as f:
@@ -58,11 +72,11 @@ class BufferPoolManager:
                 # Get the starting and ending positions of the page
                 start = self.disk_location[page_num][0]
                 # Get the new ending
-                end = start + len(pages[page_num].data)
+                end = start + len(pages[page_relative_idx].data)
                 # update the new ending
                 self.disk_location[page_num] = (start, end)
                 # Write the data to file
-                mm[start:end] = pages[page_num].data
+                mm[start:end] = pages[page_relative_idx].data
                 mm.close()
         # We have not written this page to disk before 
         else:
@@ -71,11 +85,11 @@ class BufferPoolManager:
                 # Get the current number of bytes (start)
                 start = f.tell()
                 # Write the data to file
-                f.write(pages[page_num].data)
+                f.write(pages[page_relative_idx].data)
                 # Get the current number of bytes (end)
                 end = f.tell()
                 # fill in the rest with 0 bytes
-                remaining_bytes = 4096 - len(pages[page_num].data)
+                remaining_bytes = 4096 - len(pages[page_relative_idx].data)
                 # If we still have space left, write empty bytes til 4096
                 # The idea is we want to have some cushion if the page needs
                 # to be written to disk again and the page is larger than
@@ -84,6 +98,8 @@ class BufferPoolManager:
                     f.write(bytes(remaining_bytes))
                 # Store the offsets of the page 
                 self.disk_location[page_num] = (start, end)
+        self.dirty_pages.remove(page_num)
+        return True
         
     def update_page_usage(self, pr_id, page_num):
         # print(f"Insert PR: {pr_id}, PG: {page_num}")
@@ -91,7 +107,7 @@ class BufferPoolManager:
         page_num = (pr_id * self.num_columns) + page_num
         self.lru_pages.set(page_num, pr_id)
 
-    def evict(self, curr_pages):
+    def find_evict(self):
         """
         Choose a page to evict using LRU policy. Write to disk if page 
         is dirty
@@ -101,43 +117,17 @@ class BufferPoolManager:
         page_pair = self.lru_pages.find_lru()
         if page_pair == None: 
             # print("Could not find page to evict")
-            return -1
+            return None
 
-        # The LRU page number
-        page_num = page_pair[0]
-        pr_id = page_pair[1]
-        # Find the index of the page relative to the page range
-        page_relative_idx = page_num - (pr_id * self.num_columns) 
-        # print(f"Evicting PR: {pr_id}, PG: {page_num}")
-        # TODO: Loop to get a page with pin count 0
-
-        # if page is dirty and not in use, write to disk
-        if self.is_page_dirty(page_num) and self.get_num_pins(page_num) == 0:
-            # Write the page to disk
-            self.write_back(curr_pages, page_relative_idx)
-            # Maybe sent the value in pages to None, so we know that the page is
-            # no longer in the bufferpool
-
-            # print(f"Evicted {curr_pages[page_relative_idx].data}")
-            curr_pages[page_relative_idx] = None
-            # Page is no longer dirty
-            self.dirty_pages.remove(page_num)
-        else:
-            """
-            if self.get_num_pins(page_num) != 0:
-                print(f"Cannot evict. Page {page_num} is pinned")
-            else:
-                print(f"Cannot evict. Page {page_num} is not dirty")
-            """
-            return -1
-
-        return page_num 
+        return page_pair
 
     def fetch(self, pr_id, page_num):
         # print(f"Fetching PR: {pr_id}, PG: {page_num}")
         # Read binary mode. + is necessary for mmap to work
+        page_num = (pr_id * self.num_columns) + page_num
+        if page_num not in self.disk_location:
+            return Page()
         with open(self.filename, "r+b") as f:
-            page_num = (pr_id * self.num_columns) + page_num
             # Map the file to memory
             mm = mmap.mmap(f.fileno(), 0)
             # Get the starting and ending positions of the page
@@ -146,9 +136,9 @@ class BufferPoolManager:
             # Construct the new page
             page = Page()
             # read the file
-            page.data = mm[start: end]
+            page.data = bytearray(mm[start: end])
             # Get the number of records
-            page.num_records = len(page.data) / 8
+            page.num_records = int(len(page.data) / 8)
             # print(f"Fetched {page}")
             mm.close()
             return page
