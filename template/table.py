@@ -90,7 +90,8 @@ class Table:
         # Copy base pages
         # [ 0    1     2      3     4    5   6   7 ]
         # [IND  RID  TIME  SCHEMA  TPS  KEY  G1  G2]
-        base_pages_copy = copy.deepcopy(page_range.base_pages)
+        # base_pages_copy = copy.deepcopy(page_range.base_pages)
+        base_pages_copy = page_range.base_pages.copy()
 
         # Get pages of columns that we need to read info from to perform merge
         rid_page = base_pages_copy[RID_COLUMN]  # Get RIDs
