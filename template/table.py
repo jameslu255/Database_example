@@ -77,7 +77,7 @@ class Table:
         pr_id = (base_rid // (PAGE_RANGE_MAX_RECORDS + 1))  # given the base_rid we can find the page range we want
         return self.page_ranges[pr_id]
 
-    def __merge(self, page_range):
+    def merge(self, page_range):
 
         # GAME PLAN:
 
@@ -130,7 +130,7 @@ class Table:
         # # Find physical pages' indices for RID from page_directory [RID:[x x x x x]]
         # base_page_indices = self.table.base_page_directory[start_rid]
 
-        # Go through every row (every RID)
+        # Go through every row (every RID) --> i = RID
         for i in range(start_rid, end_rid + 1):
             rid_data = rid_page.get_record_int(i)
             if rid_data != 0:
@@ -147,7 +147,7 @@ class Table:
                         query_columns.append(1)
 
                     # record = [TPS, Record(rid, key, columns)] --> always 2 items in select return array
-                    select_return = self.select_two(key, query_columns)
+                    select_return = self.select_two(page_range, i, query_columns, 0, tps, base_pages_copy)
                     new_tps = select_return[0]
                     columns = select_return[1]
 
@@ -169,12 +169,12 @@ class Table:
         pass
 
     # call example: self.replace(i, base_pages_copy, TPS_COLUMN, new_tps)
-    def replace(self, rid, base_pages_copy, column, value):
+    def replace(self, rid, base_pages_copy, column_index, value):
         # use rid to find the offset of the item within the page to replace
-        pr_id = self.get_page_range(rid)
+        pr_id = self.get_page_range(rid).id_num
         offset = rid - (PAGE_RANGE_MAX_RECORDS * pr_id)
-
-        base_pages_copy[column][offset] = value
+        # base_pages_copy[column][offset] = value
+        self.update_base_page(self, column_index, value, rid)
 
     # Change so that don't start at very bottom, but rather start at merge point
     def select_two(self, page_range, rid, query_columns, start_TID, stop_TID, base_pages):
@@ -193,7 +193,7 @@ class Table:
 
         # Get desired columns' page indices
         data = []
-        tps = None
+        tps = 0
         columns = []
         for i in range(len(query_columns)):
             column_index = i + NUM_CONSTANT_COLUMNS
@@ -268,7 +268,7 @@ class Table:
 
 
     def bit_is_set(self, column, schema_enc):
-        mask = 1 << (NUM_CONSTANT_COLUMNS + self.table.num_columns - column - 1)
+        mask = 1 << (NUM_CONSTANT_COLUMNS + self.num_columns - column - 1)
         return schema_enc & mask > 0
 
     def create_tail_page(self, col, base_rid):
