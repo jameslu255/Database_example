@@ -17,7 +17,6 @@ KEY = "key"
 G1 = "G1"
 G2 = "G2"
 
-
 # Student Id and 4 grades
 db = Database()
 grades_table = db.create_table('Grades', 3, 0)
