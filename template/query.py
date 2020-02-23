@@ -220,29 +220,24 @@ class Query:
     def update(self, key, *columns):
         self.table.tail_rid += 1
         
-        # default values for the tail record
-        schema_encoding = '' #
-        timestamp = int(time.time())
-        rid = self.table.tail_rid # rid of current tail page
-        rid_base = self.table.keys[key] # rid of base page with key
+        # Tail record default values
         indirection = 0
+        rid = self.table.tail_rid           # rid of current tail page
+        timestamp = int(time.time())
+        schema_encoding = ''
+        rid_base = self.table.keys[key]     # rid of base page with key
         
-        # grab current page range 
-        # pr_id = rid_base // (max_page_size / 8)
+        # Get current page range
         pr_id = rid_base // (PAGE_RANGE_MAX_RECORDS + 1)
         cur_pr = self.table.page_ranges[pr_id]
-
         # Update number of updates for current page range
         cur_pr.update_count += 1
 
-        # get relative rid to new page range since it starts at 0
+        # Get relative rid to new page range since it starts at 0
         rid_offset = rid_base - (PAGE_RANGE_MAX_RECORDS * pr_id)
 
-
-        # If there are no tail pages (i.e. first update performed)
-        # initiate new tail pages if tail page array empty
-        # if len(self.table.tail_pages) == 0: #tail page list empty
-        if len(cur_pr.tail_pages) == 0: #tail page list empty
+        # Create new tail pages if there are none (i.e. first update performed)
+        if len(cur_pr.tail_pages) == 0:
             tail_page_directory = []
             self.table.create_tail_page("indirection_t", rid_base)  # index 0
             self.table.create_tail_page("rid_t", rid_base)          # index 1
@@ -256,23 +251,21 @@ class Query:
                 page_index = cur_pr.free_tail_pages[x]
                 page = cur_pr.tail_pages[page_index]
                 tail_page_directory.append((page_index, page.num_records))
-                # tail_page_directory.append(self.table.free_tail_pages[x])
             # update tail page directory
             self.table.tail_page_directory[rid] = tail_page_directory
-            
-        else: #already initialized tail pages
+        # Already initialized tail pages
+        else:
             # check if a tail record was created for this key in this page 
             # check indirection pointer of the rid in the base page
             
             # get indirection value in base page
             indirection_base_index = self.table.base_page_directory[rid_base][INDIRECTION_COLUMN]
-            
-            # indirection_base_page = self.table.base_pages[indirection_base_index]
             indirection_base_page = cur_pr.base_pages[indirection_base_index]
             indirection_value = indirection_base_page.get_record_int(rid_offset)
             indirection = indirection_value
 
-            if(indirection_value != 0): #not a 0 => values has been updated before
+            # Value has been updated before
+            if(indirection_value != 0):
                 # check schema encoding to see if there's a previous tail page 
                 # get the latest tail pages
                 matching_tail_pages = self.table.tail_page_directory[indirection_value]
@@ -298,14 +291,10 @@ class Query:
                         self.table.create_tail_page(x + NUM_CONSTANT_COLUMNS, rid_base)
                     # Add the indices to the tail page directory
                     for x in range(len(columns) + NUM_CONSTANT_COLUMNS):
-                        # page_index = self.table.free_tail_pages[x]
                         page_index = cur_pr.free_tail_pages[x]
-                        # page = self.table.tail_pages[page_index]
                         page = cur_pr.tail_pages[page_index]
                         tail_page_directory.append((page_index, page.num_records))
-                        # tail_page_directory.append(self.table.free_tail_pages[x])
-                    # update tail page directory
-                    # set map of RID -> tail page indexes
+                    # update tail page directory: set map of RID -> tail page indexes
                     self.table.tail_page_directory[rid] = tail_page_directory
                     
             
