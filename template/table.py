@@ -92,7 +92,7 @@ class Table:
         # [IND  RID  TIME  SCHEMA  TPS  KEY  G1  G2]
         base_pages_copy = page_range.base_pages.copy()
 
-        # ----- Get a bunch of columns that we need to read info from to perform merge -----
+        # Get pages of columns that we need to read info from to perform merge
         rid_page = base_pages_copy[RID_COLUMN]  # Get RIDs
         indirection_page = base_pages_copy[INDIRECTION_COLUMN]  # Get Indirection
         tps_page = base_pages_copy[TPS_COLUMN]  # Get TPS
@@ -100,13 +100,8 @@ class Table:
 
         # First RID in this page range
         start_rid = page_range.id_num * PAGE_RANGE_MAX_RECORDS
-        # Get the number of rows in this page range
-        num_rows = rid_page.num_records
         # Last RID in this page range
-        end_rid = start_rid + num_rows
-
-        # # Find physical pages' indices for RID from page_directory [RID:[x x x x x]]
-        # base_page_indices = self.table.base_page_directory[start_rid]
+        end_rid = start_rid + rid_page.num_records
 
         # Go through every row (every RID) --> i = RID
         for i in range(start_rid, end_rid + 1):
@@ -115,28 +110,22 @@ class Table:
                 indirection = indirection_page.get_record_int(i)
                 tps = tps_page.get_record_int(i)
 
-                # MERGE
-                if indirection > tps: # if indirection !> tps --> no need to merge this record (hasn't had new updates)
+                # ------------------------- MERGE -------------------------
+                # Only merge records that have had updates since last merge
+                if indirection > tps:
 
-                    # ----- Set Up to call select -----
-                    key = key_page.get_record_int(i)
+                    # Get most recent values for this record
                     query_columns = []
                     for j in range(self.num_columns):
                         query_columns.append(1)
-
-                    # record = [TPS, Record(rid, key, columns)] --> always 2 items in select return array
-                    select_return = self.select_two(page_range, i, query_columns, 0, tps, base_pages_copy)
+                    select_return = self.select(page_range, i, query_columns, 0, tps, base_pages_copy)
+                    # Select's return format: [TPS#, columns[]]
                     new_tps = select_return[0]
                     columns = select_return[1]
 
-                    # Update TPS
+                    # Update TPS and New Values
                     self.replace(i, base_pages_copy, TPS_COLUMN, new_tps)
-
-                    # Put new values into base pages copy
-                    # columns in record object contains the data we want
-                    # column_index is the index of the column that we are merging into
-                    # (may need to change to +2 if select doesnt include key in return)
-                    column_index = NUM_CONSTANT_COLUMNS
+                    column_index = NUM_CONSTANT_COLUMNS     # index of the column that we are merging
                     for value in columns:
                         self.replace(i, base_pages_copy, column_index, value)
                         column_index += 1
@@ -153,7 +142,7 @@ class Table:
 
 
     # Change so that don't start at very bottom, but rather start at merge point
-    def select_two(self, page_range, rid, query_columns, start_TID, stop_TID, base_pages):
+    def select(self, page_range, rid, query_columns, start_TID, stop_TID, base_pages):
         # get relative rid to new page range since it starts at 0
         offset = rid - (PAGE_RANGE_MAX_RECORDS * page_range.id_num)
 
