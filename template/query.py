@@ -355,8 +355,8 @@ class Query:
         self.table.update_base_rid(SCHEMA_ENCODING_COLUMN, rid_base, new_base_schema_enc)
 
         # TODO: tentative putting timer stuff here??? not sure idk
-        # timer = threading.Timer(30.0, self.table. __merge(cur_pr))
-        # timer.start()
+        timer = threading.Timer(0.5, self.table.merge, args=cur_pr)
+        timer.start()
 
 
     """
