@@ -128,7 +128,86 @@ print()
 
 
 # -------------------- Measuring Merge Performance --------------------
+# -------------------- Print Table --------------------
+for (i, y) in enumerate(grades_table.page_ranges):
+    print("________________________________________________________________________________________________________")
+    page_range_header = PAGE_RANGE + str(i)
+    print(page_range_header.center(100, ' '))
+    print("________________________________________________________________________________________________________")
+    print(BASE_PAGES.center(100, ' '))
+    print(INDIRECTION.center(12, ' '), end='|')
+    print(RID.center(12, ' '), end='|')
+    print(TIME.center(12, ' '), end='|')
+    print(SCHEMA.center(12, ' '), end='|')
+    print(TPS.center(12, ' '), end='|')
+    print(KEY.center(12, ' '), end='|')
+    print(G1.center(12, ' '), end='|')
+    print(G2.center(12, ' '), end='|')
+    print()
+    for x in range(y.base_pages[0].num_records):
+        for (page_num, page) in enumerate(y.base_pages):
+            byte_val = page.data[x*8:(x*8 + 8)]
+            val = int.from_bytes(byte_val, "big")
+            # print("{0: 10d}".format(val), end=' ')
+            print(str(val).center(12, ' '), end='|')
+        print()
+    print("________________________________________________________________________________________________________")
+# ----------------------------------------------------------------------------------------------------
 merge_time_0 = process_time()
 grades_table.merge(grades_table.page_ranges[0])
 merge_time_1 = process_time()
+# -------------------- Print Table --------------------
+for (i, y) in enumerate(grades_table.page_ranges):
+    print("________________________________________________________________________________________________________")
+    page_range_header = PAGE_RANGE + str(i)
+    print(page_range_header.center(100, ' '))
+    print("________________________________________________________________________________________________________")
+    print(BASE_PAGES.center(100, ' '))
+    print(INDIRECTION.center(12, ' '), end='|')
+    print(RID.center(12, ' '), end='|')
+    print(TIME.center(12, ' '), end='|')
+    print(SCHEMA.center(12, ' '), end='|')
+    print(TPS.center(12, ' '), end='|')
+    print(KEY.center(12, ' '), end='|')
+    print(G1.center(12, ' '), end='|')
+    print(G2.center(12, ' '), end='|')
+    print()
+    for x in range(y.base_pages[0].num_records):
+        for (page_num, page) in enumerate(y.base_pages):
+            byte_val = page.data[x*8:(x*8 + 8)]
+            val = int.from_bytes(byte_val, "big")
+            # print("{0: 10d}".format(val), end=' ')
+            print(str(val).center(12, ' '), end='|')
+        print()
+    # print("________________________________________________________________________________________________________")
+
+    num_tail_pages = len(y.tail_pages)
+    num_tail_page_sets = int(num_tail_pages / (grades_table.num_columns + 5))
+    tail_page_set_start = 0
+    tail_page_set_end = 7
+    for n in range(num_tail_page_sets):
+        tail_page_header = TAIL_PAGE + str(n)
+        print(tail_page_header.center(100, ' '))
+        print(INDIRECTION.center(12, ' '), end='|')
+        print(RID.center(12, ' '), end='|')
+        print(TIME.center(12, ' '), end='|')
+        print(SCHEMA.center(12, ' '), end='|')
+        print(BASE_RID.center(12, ' '), end='|')
+        print(KEY.center(12, ' '), end='|')
+        print(G1.center(12, ' '), end='|')
+        print(G2.center(12, ' '), end='|')
+        print()
+        current_tail_page = y.tail_pages[tail_page_set_start]
+        for x in range(current_tail_page.num_records):
+            for (page_num, page) in enumerate(y.tail_pages[tail_page_set_start:tail_page_set_end + 1]):
+                byte_val = page.data[x * 8:(x * 8 + 8)]
+                val = int.from_bytes(byte_val, "big")
+                print(str(val).center(12, ' '), end='|')
+                # if page_num == tail_page_set_end:
+                #     break
+            print()
+        tail_page_set_start += 8
+        tail_page_set_end += 8
+    print("________________________________________________________________________________________________________")
+# ----------------------------------------------------------------------------------------------------
 print("Merging 10 records took:  \t\t\t", merge_time_1 - merge_time_0)
