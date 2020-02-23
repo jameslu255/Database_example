@@ -122,6 +122,7 @@ class Table:
                     # Select's return format: [TPS#, columns[]]
                     new_tps = select_return[0]
                     columns = select_return[1]
+                    print(f"Data from select for RID {i}: {columns}")
 
                     # Update TPS and New Values
                     self.replace(i, base_pages_copy, TPS_COLUMN, new_tps)
@@ -143,6 +144,7 @@ class Table:
 
     # Change so that don't start at very bottom, but rather start at merge point
     def select(self, page_range, rid, query_columns, start_TID, stop_TID, base_pages):
+        # print(f"----------------------------------- select -----------------------------------")
         # get relative rid to new page range since it starts at 0
         offset = rid - (PAGE_RANGE_MAX_RECORDS * page_range.id_num)
 
