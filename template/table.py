@@ -171,7 +171,7 @@ class Table:
     # call example: self.replace(i, base_pages_copy, TPS_COLUMN, new_tps)
     def replace(self, rid, base_pages_copy, column_index, value):
         # update original base pages for now (testing)
-        self.update_base_page(self, column_index, value, rid)
+        self.update_base_page(column_index, value, rid)
 
     # Change so that don't start at very bottom, but rather start at merge point
     def select_two(self, page_range, rid, query_columns, start_TID, stop_TID, base_pages):
@@ -289,7 +289,7 @@ class Table:
 
         cur_pr.num_tail_pages += 1
 
-    def update_tail_page(self, col, value, base_rid):
+    def append_tail_page_record(self, col, value, base_rid):
         # update the page linked to the col
         # print(str(col) + " writing val: " + str(value) + " of type " + str(type(value)))
         cur_pr = self.get_page_range(base_rid)
@@ -342,7 +342,7 @@ class Table:
         cur_pr.base_pages.append(new_page)
         cur_pr.free_base_pages.append(len(cur_pr.base_pages) - 1)
 
-    def update_base_page(self, index, value, rid):
+    def append_base_page_record(self, index, value, rid):
         # print("updating col", index, "with", value, "for rid", rid)
         # update the page linked to the index
         pr_id = rid // (PAGE_RANGE_MAX_RECORDS + 1)

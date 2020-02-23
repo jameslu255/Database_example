@@ -78,15 +78,15 @@ class Query:
         indirection = 0 # None
         
         # Write to the page
-        self.table.update_base_page(INDIRECTION_COLUMN, indirection, rid)
-        self.table.update_base_page(RID_COLUMN, rid, rid)
-        self.table.update_base_page(TIMESTAMP_COLUMN, timestamp, rid)
-        self.table.update_base_page(SCHEMA_ENCODING_COLUMN, schema_encoding, rid)
-        self.table.update_base_page(TPS_COLUMN, 0, rid)
+        self.table.append_base_page_record(INDIRECTION_COLUMN, indirection, rid)
+        self.table.append_base_page_record(RID_COLUMN, rid, rid)
+        self.table.append_base_page_record(TIMESTAMP_COLUMN, timestamp, rid)
+        self.table.append_base_page_record(SCHEMA_ENCODING_COLUMN, schema_encoding, rid)
+        self.table.append_base_page_record(TPS_COLUMN, 0, rid)
 
         # add each column's value to the respective page
         for x in range(len(columns)):
-            self.table.update_base_page(x + NUM_CONSTANT_COLUMNS, columns[x], rid)
+            self.table.append_base_page_record(x + NUM_CONSTANT_COLUMNS, columns[x], rid)
         
         # grab current page range 
         # pr_id = rid_base // (max_page_size / 8)
@@ -332,14 +332,14 @@ class Query:
 
         # write to the tail pages
         tail_page_directory = []
-        self.table.update_tail_page(INDIRECTION_COLUMN, indirection, rid_base)
-        self.table.update_tail_page(RID_COLUMN, rid, rid_base)
-        self.table.update_tail_page(TIMESTAMP_COLUMN, timestamp, rid_base)
-        self.table.update_tail_page(SCHEMA_ENCODING_COLUMN, schema_encoding, rid_base)
-        self.table.update_tail_page(BASE_RID_COLUMN, rid_base, rid_base)
+        self.table.append_tail_page_record(INDIRECTION_COLUMN, indirection, rid_base)
+        self.table.append_tail_page_record(RID_COLUMN, rid, rid_base)
+        self.table.append_tail_page_record(TIMESTAMP_COLUMN, timestamp, rid_base)
+        self.table.append_tail_page_record(SCHEMA_ENCODING_COLUMN, schema_encoding, rid_base)
+        self.table.append_tail_page_record(BASE_RID_COLUMN, rid_base, rid_base)
         for x in range(len(columns)):
             if columns[x] != None:
-                self.table.update_tail_page(x + NUM_CONSTANT_COLUMNS, columns[x], rid_base)
+                self.table.append_tail_page_record(x + NUM_CONSTANT_COLUMNS, columns[x], rid_base)
         # Add the indices to the tail page directory
         for x in range(len(columns) + NUM_CONSTANT_COLUMNS):
             # page_index = self.table.free_tail_pages[x]
