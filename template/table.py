@@ -158,7 +158,7 @@ class Table:
                     # columns in record object contains the data we want
                     # column_index is the index of the column that we are merging into
                     # (may need to change to +2 if select doesnt include key in return)
-                    column_index = NUM_CONSTANT_COLUMNS + 1
+                    column_index = NUM_CONSTANT_COLUMNS
                     for value in columns:
                         self.replace(i, base_pages_copy, column_index, value)
                         column_index += 1
