@@ -170,8 +170,9 @@ class Table:
 
     # call example: self.replace(i, base_pages_copy, TPS_COLUMN, new_tps)
     def replace(self, rid, base_pages_copy, column_index, value):
-        # update original base pages for now (testing)
-        self.update_base_page(column_index, value, rid)
+        base_page = base_pages_copy[column_index]
+        base_page.set_record(rid, value)
+
 
     # Change so that don't start at very bottom, but rather start at merge point
     def select_two(self, page_range, rid, query_columns, start_TID, stop_TID, base_pages):
