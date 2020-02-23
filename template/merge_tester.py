@@ -23,6 +23,13 @@ grades_table = db.create_table('Grades', 3, 0)
 query = Query(grades_table)
 keys = []
 
+
+def print_header_line(count):
+    for j in range(count):
+        print("_", end='')
+    print()
+
+
 # -------------------- Measuring Insert Performance --------------------
 insert_time_0 = process_time()
 for i in range(0, 10):
@@ -31,10 +38,14 @@ for i in range(0, 10):
 insert_time_1 = process_time()
 # -------------------- Print Table --------------------
 for (i, y) in enumerate(grades_table.page_ranges):
-    print("________________________________________________________________________________________________________")
+    for j in range(104):
+        print("_", end='')
+    print()
     page_range_header = PAGE_RANGE + str(i)
     print(page_range_header.center(104, ' '))
-    print("________________________________________________________________________________________________________")
+    for j in range(104):
+        print("_", end='')
+    print()
     print(BASE_PAGES.center(104, ' '))
     print(INDIRECTION.center(12, ' '), end='|')
     print(RID.center(12, ' '), end='|')
@@ -52,7 +63,9 @@ for (i, y) in enumerate(grades_table.page_ranges):
             # print("{0: 10d}".format(val), end=' ')
             print(str(val).center(12, ' '), end='|')
         print()
-    print("________________________________________________________________________________________________________")
+    for j in range(104):
+        print("_", end='')
+    print()
 # ----------------------------------------------------------------------------------------------------
 print("Inserting 10 records took:  \t\t\t", insert_time_1 - insert_time_0)
 print()
@@ -71,10 +84,10 @@ for i in range(0, 10):
 update_time_1 = process_time()
 # -------------------- Print Table --------------------
 for (i, y) in enumerate(grades_table.page_ranges):
-    print("________________________________________________________________________________________________________")
+    print_header_line(104)
     page_range_header = PAGE_RANGE + str(i)
     print(page_range_header.center(100, ' '))
-    print("________________________________________________________________________________________________________")
+    print_header_line(104)
     print(BASE_PAGES.center(104, ' '))
     print(INDIRECTION.center(12, ' '), end='|')
     print(RID.center(12, ' '), end='|')
@@ -89,10 +102,8 @@ for (i, y) in enumerate(grades_table.page_ranges):
         for (page_num, page) in enumerate(y.base_pages):
             byte_val = page.data[x*8:(x*8 + 8)]
             val = int.from_bytes(byte_val, "big")
-            # print("{0: 10d}".format(val), end=' ')
             print(str(val).center(12, ' '), end='|')
         print()
-    # print("________________________________________________________________________________________________________")
 
     num_tail_pages = len(y.tail_pages)
     num_tail_page_sets = int(num_tail_pages / (grades_table.num_columns + 5))
@@ -121,7 +132,7 @@ for (i, y) in enumerate(grades_table.page_ranges):
             print()
         tail_page_set_start += 8
         tail_page_set_end += 8
-    print("________________________________________________________________________________________________________")
+    print_header_line(104)
 # ----------------------------------------------------------------------------------------------------
 print("Updating 10 records took:  \t\t\t", update_time_1 - update_time_0)
 print()
@@ -133,10 +144,10 @@ grades_table.merge(grades_table.page_ranges[0])
 merge_time_1 = process_time()
 # -------------------- Print Table --------------------
 for (i, y) in enumerate(grades_table.page_ranges):
-    print("________________________________________________________________________________________________________")
+    print_header_line(104)
     page_range_header = PAGE_RANGE + str(i)
     print(page_range_header.center(104, ' '))
-    print("________________________________________________________________________________________________________")
+    print_header_line(104)
     print(BASE_PAGES.center(104, ' '))
     print(INDIRECTION.center(12, ' '), end='|')
     print(RID.center(12, ' '), end='|')
@@ -154,7 +165,6 @@ for (i, y) in enumerate(grades_table.page_ranges):
             # print("{0: 10d}".format(val), end=' ')
             print(str(val).center(12, ' '), end='|')
         print()
-    # print("________________________________________________________________________________________________________")
 
     num_tail_pages = len(y.tail_pages)
     num_tail_page_sets = int(num_tail_pages / (grades_table.num_columns + 5))
@@ -183,6 +193,7 @@ for (i, y) in enumerate(grades_table.page_ranges):
             print()
         tail_page_set_start += 8
         tail_page_set_end += 8
-    print("________________________________________________________________________________________________________")
+    print_header_line(104)
 # ----------------------------------------------------------------------------------------------------
 print("Merging 10 records took:  \t\t\t", merge_time_1 - merge_time_0)
+
