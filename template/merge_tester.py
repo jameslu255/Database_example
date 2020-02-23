@@ -129,6 +129,6 @@ print()
 
 # -------------------- Measuring Merge Performance --------------------
 merge_time_0 = process_time()
-grades_table.__merge(grades_table.page_ranges[0])
+grades_table.merge(grades_table.page_ranges[0])
 merge_time_1 = process_time()
 print("Merging 10 records took:  \t\t\t", merge_time_1 - merge_time_0)
