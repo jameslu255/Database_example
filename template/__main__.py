@@ -26,7 +26,7 @@ keys = []
 
 # Measuring Insert Performance
 insert_time_0 = process_time()
-for i in range(0, 10000):
+for i in range(0, 100):
     query.insert(906659671 + i, 93, 0, 0, 0)
     keys.append(906659671 + i)
 insert_time_1 = process_time()
@@ -43,7 +43,7 @@ update_cols = [
 ]
 
 update_time_0 = process_time()
-for i in range(0, 10000):
+for i in range(0, 100):
     query.update(choice(keys), *(choice(update_cols)))
 update_time_1 = process_time()
 # -------------------- Print Table --------------------
@@ -52,7 +52,7 @@ for (i, y) in enumerate(grades_table.page_ranges):
     page_range_header = PAGE_RANGE + str(i)
     print(page_range_header.center(100, ' '))
     print("________________________________________________________________________________________________________")
-    print(BASE_PAGES.center(100, ' '))
+    print(BASE_PAGES.center(104, ' '))
     print(INDIRECTION.center(12, ' '), end='|')
     print(RID.center(12, ' '), end='|')
     print(TIME.center(12, ' '), end='|')
@@ -77,7 +77,7 @@ for (i, y) in enumerate(grades_table.page_ranges):
     tail_page_set_end = 7
     for n in range(num_tail_page_sets):
         tail_page_header = TAIL_PAGE + str(n)
-        print(tail_page_header.center(100, ' '))
+        print(tail_page_header.center(104, ' '))
         print(INDIRECTION.center(12, ' '), end='|')
         print(RID.center(12, ' '), end='|')
         print(TIME.center(12, ' '), end='|')
@@ -104,21 +104,21 @@ print("Updating 10k records took:  \t\t\t", update_time_1 - update_time_0)
 
 # Measuring Select Performance
 select_time_0 = process_time()
-for i in range(0, 10000):
+for i in range(0, 100):
     query.select(choice(keys), [1, 1, 1, 1, 1])
 select_time_1 = process_time()
 print("Selecting 10k records took:  \t\t\t", select_time_1 - select_time_0)
 
 # Measuring Aggregate Performance
 agg_time_0 = process_time()
-for i in range(0, 10000, 100):
-    result = query.sum(i, 100, randrange(0, 5))
+for i in range(0, 100, 10):
+    result = query.sum(i, 10, randrange(0, 5))
 agg_time_1 = process_time()
 print("Aggregate 10k of 100 record batch took:\t", agg_time_1 - agg_time_0)
 
 # Measuring Delete Performance
 delete_time_0 = process_time()
-for i in range(0, 10000):
+for i in range(0, 100):
     query.delete(906659671 + i)
 delete_time_1 = process_time()
 print("Deleting 10k records took:  \t\t\t", delete_time_1 - delete_time_0)
