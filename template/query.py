@@ -358,6 +358,11 @@ class Query:
         # timer = threading.Timer(0.1, self.table.merge, args=[cur_pr])
         # timer.start()
 
+        # might need to do this? not sure hmmm will make it super slow tho :(
+        # cur_pr_copy = copy.deepcopy(cur_pr)
+        if (cur_pr.update_count % 10) == 0:
+            self.table.merge(cur_pr)
+
 
     """
     :param start_range: int         # Start of the key range to aggregate 
