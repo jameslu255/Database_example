@@ -32,7 +32,7 @@ def print_header_line(count):
 
 # -------------------- Measuring Insert Performance --------------------
 insert_time_0 = process_time()
-for i in range(0, 520):
+for i in range(0, 630):
     query.insert(906659671 + i, 93, 0)
     keys.append(906659671 + i)
 insert_time_1 = process_time()
@@ -79,7 +79,7 @@ update_cols = [
 ]
 
 update_time_0 = process_time()
-for i in range(0, 513):
+for i in range(0, 630):
     # query.update(choice(keys), *(choice(update_cols)))
     query.update(906659671 + i, *[None,88,None])
 update_time_1 = process_time()

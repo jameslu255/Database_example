@@ -360,11 +360,11 @@ class Query:
 
         # might need to do this? not sure hmmm will make it super slow tho :(
         # cur_pr_copy = copy.deepcopy(cur_pr)
-        # if (cur_pr.update_count % 10) == 0:
-        #     self.table.merge(cur_pr)
-        print("length tail page of cur pr : " + str(len(cur_pr.tail_pages)))
-        if(len(cur_pr.tail_pages) >= ((4 + self.table.num_columns + 1))*1):
+        if (cur_pr.update_count % 100) == 0:
             self.table.merge(cur_pr)
+        # print("length tail page of cur pr : " + str(len(cur_pr.tail_pages)))
+        # if(len(cur_pr.tail_pages) >= ((4 + self.table.num_columns + 1))*1):
+        #     self.table.merge(cur_pr)
 
 
     """
