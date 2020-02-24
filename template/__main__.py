@@ -36,16 +36,43 @@ def print_header_line(count):
 
 # Measuring Insert Performance
 insert_time_0 = process_time()
-for i in range(0, 50):
+for i in range(0, 10):
     query.insert(906659671 + i, 93, 0, 0, 0)
     keys.append(906659671 + i)
 insert_time_1 = process_time()
 
 print("Inserting 10k records took:  \t\t\t", insert_time_1 - insert_time_0)
 
+# ---------------------------------------- Print Table ----------------------------------------
+for (i, y) in enumerate(grades_table.page_ranges):
+    print_header_line(143)
+    page_range_header = PAGE_RANGE + str(i)
+    print(page_range_header.center(143, ' '))
+    print_header_line(143)
+    print(BASE_PAGES.center(143, ' '))
+    print(INDIRECTION.center(12, ' '), end='|')
+    print(RID.center(12, ' '), end='|')
+    print(TIME.center(12, ' '), end='|')
+    print(SCHEMA.center(12, ' '), end='|')
+    print(TPS.center(12, ' '), end='|')
+    print(KEY.center(12, ' '), end='|')
+    print(G1.center(12, ' '), end='|')
+    print(G2.center(12, ' '), end='|')
+    print(G3.center(12, ' '), end='|')
+    print(G4.center(12, ' '), end='|')
+    # print(G5.center(12, ' '), end='|')
+    print()
+    for x in range(y.base_pages[0].num_records):
+        for (page_num, page) in enumerate(y.base_pages):
+            byte_val = page.data[x*8:(x*8 + 8)]
+            val = int.from_bytes(byte_val, "big")
+            # print("{0: 10d}".format(val), end=' ')
+            print(str(val).center(12, ' '), end='|')
+        print()
+
 # Measuring update Performance
 update_cols = [
-    [randrange(0, 100), None, None, None, None],
+    [None, None, None, None, None],
     [None, randrange(0, 100), None, None, None],
     [None, None, randrange(0, 100), None, None],
     [None, None, None, randrange(0, 100), None],
@@ -73,7 +100,7 @@ for (i, y) in enumerate(grades_table.page_ranges):
     print(G2.center(12, ' '), end='|')
     print(G3.center(12, ' '), end='|')
     print(G4.center(12, ' '), end='|')
-    print(G5.center(12, ' '), end='|')
+    # print(G5.center(12, ' '), end='|')
     print()
     for x in range(y.base_pages[0].num_records):
         for (page_num, page) in enumerate(y.base_pages):
@@ -100,17 +127,17 @@ for (i, y) in enumerate(grades_table.page_ranges):
         print(G2.center(12, ' '), end='|')
         print(G3.center(12, ' '), end='|')
         print(G4.center(12, ' '), end='|')
-        print(G5.center(12, ' '), end='|')
+        # print(G5.center(12, ' '), end='|')
         print()
         current_tail_page = y.tail_pages[tail_page_set_start]
         for x in range(current_tail_page.num_records):
-            for (page_num, page) in enumerate(y.tail_pages[tail_page_set_start:tail_page_set_end + 1]):
+            for (page_num, page) in enumerate(y.tail_pages[tail_page_set_start:tail_page_set_end]):
                 byte_val = page.data[x * 8:(x * 8 + 8)]
                 val = int.from_bytes(byte_val, "big")
                 print(str(val).center(12, ' '), end='|')
             print()
-        tail_page_set_start += 8
-        tail_page_set_end += 8
+        tail_page_set_start += 10
+        tail_page_set_end += 10
     print_header_line(143)
 # ----------------------------------------------------------------------------------------------------
 print("Updating 10k records took:  \t\t\t", update_time_1 - update_time_0)
@@ -131,7 +158,7 @@ print("Aggregate 10k of 100 record batch took:\t", agg_time_1 - agg_time_0)
 
 # Measuring Delete Performance
 delete_time_0 = process_time()
-for i in range(0, 50):
+for i in range(0, 10):
     query.delete(906659671 + i)
 delete_time_1 = process_time()
 print("Deleting 10k records took:  \t\t\t", delete_time_1 - delete_time_0)
