@@ -91,8 +91,7 @@ class Table:
         # Copy base pages
         # [ 0    1     2      3     4    5   6   7 ]
         # [IND  RID  TIME  SCHEMA  TPS  KEY  G1  G2]
-        # base_pages_copy = copy.deepcopy(page_range.base_pages)
-        base_pages_copy = page_range.base_pages.copy()
+        base_pages_copy = copy.deepcopy(page_range.base_pages)
 
         # Get pages of columns that we need to read info from to perform merge
         rid_page = base_pages_copy[RID_COLUMN]  # Get RIDs
@@ -133,13 +132,23 @@ class Table:
                         column_index += 1
 
         # Update real base pages
-        # Free tail pages
-        # Update tail directory
+        # [no   no    no     no    yes  yes yes yes]
+        # [ 0    1     2      3     4    5   6   7 ]
+        # [IND  RID  TIME  SCHEMA  TPS  KEY  G1  G2]
+        start_col = NUM_CONSTANT_COLUMNS - 1        # 5-1 = 4
+        end_col = start_col + self.num_columns      # 4+3 = 7
+        for i in range(start_col, end_col + 1):
+            for rid in range(start_rid, end_rid + 1):
+                value = base_pages_copy[i].get_record_int(rid)
+                # Lock
+                self.replace(rid, page_range.base_pages, i, value)
+                # Unlock
+
         pass
 
     # call example: self.replace(i, base_pages_copy, TPS_COLUMN, new_tps)
-    def replace(self, rid, base_pages_copy, column_index, value):
-        base_page = base_pages_copy[column_index]
+    def replace(self, rid, base_pages, column_index, value):
+        base_page = base_pages[column_index]
         base_page.set_record(rid, value)
 
 

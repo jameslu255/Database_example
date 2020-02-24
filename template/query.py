@@ -218,7 +218,7 @@ class Query:
     # Update a record with specified key and columns
     """
     def update(self, key, *columns):
-        # print(f"Update: key = {key} columns = {columns}")
+        print(f"Update: key = {key} columns = {columns}")
         self.table.tail_rid += 1
         
         # Tail record default values
