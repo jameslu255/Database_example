@@ -1,6 +1,5 @@
 from template.db import Database
 from template.query import Query
-from template.index import Index
 # from lstore.config import init
 
 from random import choice, randint, sample, seed
@@ -16,13 +15,13 @@ records = {}
 
 seed(3562901)
 
-for i in range(0, 10):
-    key = 92106429 + i
+for i in range(0, 1000):
+    key = 92106429 + randint(0, 9000)
     while key in records:
         key = 92106429 + randint(0, 9000)
-    records[key] = [key, randint(0, 100), randint(0, 100), randint(0, 100), randint(0, 100)]
+    records[key] = [key, randint(0, 20), randint(0, 20), randint(0, 20), randint(0, 20)]
     query.insert(*records[key])
-    #print('inserted', records[key])
+    print('inserted', records[key])
 
 for key in records:
     record = query.select(key, [1, 1, 1, 1, 1])[0]
@@ -32,9 +31,8 @@ for key in records:
             error = True
     if error:
         print('select error on', key , ':', record, ', correct:', records[key])
-    #else:
-        #print('select on', key, ':', record)
-
+    else:
+        print('select on', key, ':', record)
 
 for key in records:
     updated_columns = [None, None, None, None, None]
@@ -51,11 +49,9 @@ for key in records:
                 error = True
         if error:
             print('update error on', original, 'and', updated_columns, ':', record, ', correct:', records[key])
-        #else:
-            #print('update on', original, 'and', updated_columns, ':', record)
+        else:
+            print('update on', original, 'and', updated_columns, ':', record)
         updated_columns[i] = None
-
-
 
 keys = sorted(list(records.keys()))
 for c in range(0, grades_table.num_columns):
@@ -65,8 +61,5 @@ for c in range(0, grades_table.num_columns):
         result = query.sum(keys[r[0]], keys[r[1]], c)
         if column_sum != result:
             print('sum error on [', keys[r[0]], ',', keys[r[1]], ']: ', result, ', correct: ', column_sum)
-        #else:
-            #print('sum on [', keys[r[0]], ',', keys[r[1]], ']: ', column_sum)
-
-
-grades_table.index.print_trees()
+        else:
+            print('sum on [', keys[r[0]], ',', keys[r[1]], ']: ', column_sum)

@@ -26,18 +26,32 @@ class Index:
         btree_list[column_num].insert(key, value)
 
     def update_btree(self, column_num, key, value, new_key):
-        print(column_num)
-        print("Student score is " + str(key) + " and RID of student is " + str(value) + " and new score is " + str(new_key))
+        #print("Student score is " + str(key) + " and RID of student is " + str(value) + " and new score is " + str(new_key))
         current_list = btree_list[column_num].get(key, "key not found")
-        print("Students that got score at " + str(key) + " is " + str(current_list))
-        self.print_tree(column_num)
+        current_key = key
+
+        #self.print_tree(column_num)
+        if (current_list == "key not found"):
+            found = False
+            prev_key = key
+            print(column_num)
+            print("Attempting fix")
+            while (found == False):
+                current_key = btree_list[column_num].minKey(prev_key)
+                print(current_key)
+                current_list = btree_list[column_num].get(current_key, "key not found")
+                if (value in current_list):
+                    found = True
+                    print("Fixed!")
+                prev_key = current_key + 1
+        #print("Students that got score at " + str(current_key) + " is " + str(current_list))
         if (len(current_list) == 1):
-            btree_list[column_num].pop(key)
+            btree_list[column_num].pop(current_key)
         else:
             if( value in current_list):
                 current_list.remove(value)
-            btree_list[column_num].__setitem__(key, current_list)
-        print("Removed " + str(value) + " from list:" + str(key) + " -> " + str(btree_list[column_num].get(key, "Key was removed since it is empty now")))
+            btree_list[column_num].__setitem__(current_key, current_list)
+        #print("Removed " + str(value) + " from list:" + str(current_key) + " -> " + str(btree_list[column_num].get(current_key, "Key was removed since it is empty now")))
 
         current_list = btree_list[column_num].get(new_key, -1)
         if (current_list == -1):
@@ -45,7 +59,7 @@ class Index:
         else:
             current_list.add(value)
             btree_list[column_num].__setitem__(new_key, current_list)
-        print("Added "+ str(value) + " to list:" + str(new_key) + " -> " + str(btree_list[column_num].get(new_key)))
+        #print("Added " + str(value) + " to list:" + str(new_key) + " -> " + str(btree_list[column_num].get(new_key)))
 
 
     def print_trees(self):

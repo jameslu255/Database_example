@@ -87,9 +87,9 @@ class Query:
             self.table.update_base_page(x + 4, columns[x], rid)
             if x != 0:
                 # subtract 1 from x because we want to start with assignment 1
-                Index.add_values(self, x, columns[x], rid)
+                self.table.index.add_values( x, columns[x], rid)
             else:
-                Index.create_dictionary(self, x, columns[x], rid)
+                self.table.index.create_dictionary( x, columns[x], rid)
         
         # grab current page range 
         # pr_id = rid_base // (max_page_size / 8)
