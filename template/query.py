@@ -19,8 +19,8 @@ class Query:
     """
     def delete(self, key):
         # get base rid
-        base_rid = self.table.keys[key] 
-        
+        #base_rid = self.table.keys[key]
+        base_rid = self.table.index.get_value(0, key)
         # grab current page range 
         # pr_id = rid_base // (max_page_size / 8)
         pr_id = base_rid // (512 + 1)
@@ -112,12 +112,14 @@ class Query:
     # Read a record with specified key
     """
     def select(self, key, query_columns):
-        if key not in self.table.keys:
-            return []
+        #if key not in self.table.keys:
+        #    return []
 
         # Find RID from key, keys = {SID: RID}
-        rid = self.table.keys[key]
-
+        #rid = self.table.keys[key]
+        rid = self.table.index.get_value(0, key)
+        if (rid == "Key not found"):
+            return []
         # Find Page Range ID
         pr_id = rid//513
         page_range = self.table.page_ranges[pr_id]
@@ -151,9 +153,9 @@ class Query:
                 base_page_index = base_page_indices[i+4]
                 base_page = page_range.base_pages[base_page_index]
                 base_data = base_page.get_record_int(offset)
-                # print("index",i,"appending base data", base_data)
+                #print("index",i,"appending base data", base_data)
                 columns.append(base_data)
-                # print(f"Column {i+4} -> Base Page Index: {base_page_index} -> Data: {base_data}")
+                #print(f"Column {i+4} -> Base Page Index: {base_page_index} -> Data: {base_data}")
             # If tail page
             elif query_columns[i] == 1 and has_prev_tail_pages:# query this column, but it's been updated before
                 # get tail page value of this column 
@@ -193,7 +195,7 @@ class Query:
                         # print("correct tail page data is in index",correct_tail_page[0],correct_tail_page[1])
 
                 columns.append(tail_data)
-                
+
         record = [Record(rid, key, columns)]
         return record
 
