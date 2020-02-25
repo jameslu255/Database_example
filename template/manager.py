@@ -133,7 +133,9 @@ class BufferPoolManager:
         # We assume that if the page is neitehr in the bufferpool
         # nor disk, it's probably an empty page
         if page_num not in self.disk_location:
+            print(f"Page {page_num} not in disk")
             return Page()
+
         # Read binary mode. + is necessary for mmap to work
         with open(self.filename, "r+b") as f:
             # Map the file to memory

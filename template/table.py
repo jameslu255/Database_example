@@ -42,8 +42,9 @@ class Table:
         self.base_rid = 0
         # tail page id
         self.tail_rid = 0
-
-        self.capacity = (num_columns + 4) * 4
+        
+        # Aim for 20 * num records or else things will be too slow
+        self.capacity = 20000
         # bufferpool size
         self.size = 0
 
@@ -97,6 +98,8 @@ class Table:
             self.page_ranges[evictPair[1]].tail_pages[page_num] = None
             # Decrement number of pages in the bufferpool
             self.size -= 1
+            return True
+        return False
 
     def evict_base_page(self):
         """
@@ -116,7 +119,16 @@ class Table:
             self.page_ranges[evictPair[1]].base_pages[page_num] = None
             # Decrement number of pages in the bufferpool
             self.size -= 1
+            return True
+        return False
 
+    def check_need_evict(self):
+        if self.has_capacity():
+            return
+        a = self.evict_base_page()
+        b = self.evict_tail_page()
+        assert(a or b), "Cannot evict anything" 
+        
     def create_tail_page(self, col, base_rid):
         # get the base_page that's getting updated rid (passed in as base_rid)
         # find the page range that base_page is in
@@ -125,8 +137,7 @@ class Table:
         cur_pr = self.page_ranges[pr_id]
 
         # Check if we have room for the new page
-        if not self.has_capacity():
-            self.evict_tail_page()
+        self.check_need_evict()
         
         # create the page and push to array holding pages
         new_page = Page()
@@ -145,6 +156,7 @@ class Table:
         # Add page to lru
         self.tail_page_manager.update_page_usage(cur_pr.id_num, len(cur_pr.tail_pages) - 1)
         # Not dirty because we didn't write to it
+        self.tail_page_manager.set_page_dirty(cur_pr.id_num, len(cur_pr.tail_pages) - 1)
 
         cur_pr.num_tail_pages += 1
 
@@ -158,13 +170,11 @@ class Table:
         # If page isn't in bufferpool
         if cur_page == None:
             # If we don't have enough space to bring in another page
-            if not self.has_capacity():
-                self.evict_tail_page()
-                
+            self.check_need_evict()
+
             # Fetch the page from disk
-            fetched_page = self.tail_page_manager.fetch(cur_pr.id_num, index_relative)
-            cur_pr.tail_pages[index_relative] = fetched_page
-            cur_page = fetched_page
+            cur_page = self.tail_page_manager.fetch(cur_pr.id_num, index_relative)
+            self.page_ranges[pr_id].tail_pages[index_relative] = cur_page 
             self.size += 1
         
         # Pin the current Page
@@ -172,9 +182,7 @@ class Table:
         error = cur_page.write(value)
         if error == -1:  # maximum size reached in page
             # Check if we have room for the new page
-            if not self.has_capacity():
-                self.evict_tail_page()
-                
+            self.check_need_evict()
             # create new page
             page = Page()
             self.size += 1
@@ -192,12 +200,12 @@ class Table:
             self.tail_page_manager.update_page_usage(cur_pr.id_num, new_tail_page_num)
             # Page is dirty
             self.tail_page_manager.set_page_dirty(cur_pr.id_num, new_tail_page_num)
-        else:
-            # update lru
-            self.tail_page_manager.update_page_usage(cur_pr.id_num, index_relative)
-            # Page is dirty
-            self.tail_page_manager.set_page_dirty(cur_pr.id_num, index_relative)
 
+        # Page is dirty
+        self.tail_page_manager.set_page_dirty(cur_pr.id_num, index_relative)
+
+        # update lru
+        self.tail_page_manager.update_page_usage(cur_pr.id_num, index_relative)
 
         # Unpin the current Page
         self.tail_page_manager.unpin(cur_pr.id_num, index_relative)
@@ -214,13 +222,12 @@ class Table:
         # If page isn't in bufferpool
         if cur_page == None:
             # If we don't have enough space to bring in another page
-            if not self.has_capacity():
-                self.evict_tail_page()
+            self.check_need_evict()
 
-            fetched_page = self.tail_page_manager.fetch(cur_pr.id_num,
+            cur_page = self.tail_page_manager.fetch(cur_pr.id_num,
             column_index)
-            cur_pr.tail_pages[column_index] = fetched_page
-            cur_page = fetched_page
+            self.page_ranges[pr_id].tail_pages[column_index] = cur_page
+            self.size += 1
             
         # Pin the current Page
         self.tail_page_manager.pin(cur_pr.id_num, column_index)
@@ -242,12 +249,11 @@ class Table:
         # If page isn't in bufferpool
         if cur_page == None:
             # If we don't have enough space to bring in another page
-            if not self.has_capacity():
-                self.evict_base_page()
-                
-            fetched_page = self.base_page_manager.fetch(cur_pr.id_num, base_page_index)
-            cur_pr.base_pages[base_page_index] = fetched_page
-            cur_page = fetched_page
+            self.check_need_evict()
+
+            cur_page = self.base_page_manager.fetch(cur_pr.id_num, base_page_index)
+            self.page_ranges[pr_id].base_pages[base_page_index] = cur_page 
+            self.size += 1
         
         # Pin the page
         self.base_page_manager.pin(cur_pr.id_num, base_page_index)
@@ -267,9 +273,8 @@ class Table:
         cur_pr = self.page_ranges[self.cur_page_range_id]
 
        # Check if we have room for the new page
-        if not self.has_capacity():
-            self.evict_base_page()
-            
+        self.check_need_evict()
+
         # check current PR can hold more
         self.create_new_pr_if_necessary()
 
@@ -285,6 +290,8 @@ class Table:
         self.base_page_manager.update_page_usage(self.cur_page_range_id, 
                                             len(cur_pr.base_pages) - 1)
         # Not dirty because new page was not written to
+        self.base_page_manager.set_page_dirty(self.cur_page_range_id, 
+                                            len(cur_pr.base_pages) - 1)
 
 
     def update_base_page(self, index, value, rid):
@@ -310,22 +317,19 @@ class Table:
         # If page isn't in bufferpool
         if cur_page == None:
             # If we don't have enough space to bring in another page
-            if not self.has_capacity():
-                self.evict_base_page()
+            self.check_need_evict()
                 
             # Fetch the page
-            fetched_page = self.base_page_manager.fetch(pr.id_num, index_relative)
-            cur_pr.tail_pages[index_relative] = fetched_page
-            cur_page = fetched_page
+            cur_page = self.base_page_manager.fetch(pr.id_num, index_relative)
+            self.page_ranges[pr_id].base_pages[index_relative] = cur_page 
+            self.size += 1
          
         # Pin the page
         self.base_page_manager.pin(pr.id_num, index_relative)
         error = cur_page.write(value)
         if error == -1:  # maximum size reached in page
             # Check if we have room for the new page
-            if not self.has_capacity():
-                self.evict_base_page()
-                
+            self.check_need_evict()
             # similar to above check if we have space in page range/create if necessary/update
             # create new page
             page = Page()
@@ -342,12 +346,12 @@ class Table:
             # increment the num pages count in either case (full or not full since we are adding a new page)
             pr.num_base_pages += 1
             self.size += 1
-        else:
-            # Update LRU
-            self.base_page_manager.update_page_usage(pr.id_num, index_relative)
-            # Page is dirty
-            self.base_page_manager.set_page_dirty(pr.id_num, index_relative)
 
+        # Page is dirty
+        self.base_page_manager.set_page_dirty(pr.id_num, index_relative)
+
+        # Update LRU
+        self.base_page_manager.update_page_usage(pr.id_num, index_relative)
 
         # Unpin the page
         self.base_page_manager.unpin(pr.id_num, index_relative)
