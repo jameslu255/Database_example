@@ -128,50 +128,26 @@ class Table:
         # Copy base pages
         # [ 0    1     2      3     4    5   6   7 ]
         # [IND  RID  TIME  SCHEMA  TPS  KEY  G1  G2]
-        if page_range.base_pages[TPS_COLUMN] == None:
-            # If we don't have enough space to bring in another page
-            self.check_need_evict()
-
-            # Fetch the page from disk
-            cur_page = self.base_page_manager.fetch(page_range.id_num, TPS_COLUMN)
-            page_range.base_pages[TPS_COLUMN] = cur_page
-            self.size += 1
-
-        if page_range.base_pages[INDIRECTION_COLUMN] == None:
-            # If we don't have enough space to bring in another page
-            self.check_need_evict()
-
-            # Fetch the page from disk
-            cur_page = self.base_page_manager.fetch(page_range.id_num, INDIRECTION_COLUMN)
-            page_range.base_pages[INDIRECTION_COLUMN] = cur_page
-            self.size += 1
-
-        if page_range.base_pages[RID_COLUMN] == None:
-            # If we don't have enough space to bring in another page
-            self.check_need_evict()
-
-            # Fetch the page from disk
-            cur_page = self.base_page_manager.fetch(page_range.id_num, RID_COLUMN)
-            page_range.base_pages[RID_COLUMN] = cur_page
-            self.size += 1
-
-
+        
         base_pages_copy = copy.deepcopy(page_range.base_pages)
+        tps_page = base_pages_copy[TPS_COLUMN]  # Get TPS
+        if tps_page == None:
+            # Fetch the page from disk
+            tps_page = self.base_page_manager.fetch(page_range.id_num, TPS_COLUMN)
+            page_range.base_pages[TPS_COLUMN] = tps_page
+
+        indirection_page = base_pages_copy[INDIRECTION_COLUMN]  # Get Indirection
+        if indirection_page == None:
+            # Fetch the page from disk
+            indirection_page = self.base_page_manager.fetch(page_range.id_num, INDIRECTION_COLUMN)
+            page_range.base_pages[INDIRECTION_COLUMN] = indirection_page
 
         # Get pages of columns that we need to read info from to perform merge
         rid_page = base_pages_copy[RID_COLUMN]  # Get RIDs
-
-        indirection_page = base_pages_copy[INDIRECTION_COLUMN]  # Get Indirection
-        tps_page = base_pages_copy[TPS_COLUMN]  # Get TPS
-        if tps_page == None:
-            # If we don't have enough space to bring in another page
-            self.check_need_evict()
-
+        if rid_page == None:
             # Fetch the page from disk
-            cur_page = self.tail_page_manager.fetch(cur_pr.id_num, index_relative)
-            self.page_ranges[pr_id].tail_pages[index_relative] = cur_page
-            self.size += 1
-
+            rid_page = self.base_page_manager.fetch(page_range.id_num, RID_COLUMN)
+            page_range.base_pages[RID_COLUMN] = rid_page
 
         # First RID in this page range
         start_rid = (page_range.id_num * PAGE_RANGE_MAX_RECORDS) + 1
@@ -218,6 +194,10 @@ class Table:
         for i in range(start_col, end_col + 1):
             for rid in range(start_rid, end_rid + 1):
                 offset = rid - (PAGE_RANGE_MAX_RECORDS * page_range.id_num)
+                if base_pages_copy[i] == None:
+                    # Fetch the page from disk
+                    base_pages_copy[i] = self.base_page_manager.fetch(page_range.id_num, i)
+
                 value = base_pages_copy[i].get_record_int(offset)
                 # Lock
                 self.replace(offset, page_range.base_pages, i, value)
@@ -313,6 +293,12 @@ class Table:
             # If base page
             if query_columns[i] == 1 and not has_prev_tail_pages:
                 base_page = base_pages[column_index]
+                if base_page == None:
+                    # Fetch the page from disk
+                    cur_page = self.base_page_manager.fetch(page_range.id_num, column_index)
+                    page_range.base_pages[column_index] = base_page
+
+
                 base_data = base_page.get_record_int(offset)
                 # print("index",i,"appending base data", base_data)
                 columns.append(base_data)
@@ -327,6 +313,11 @@ class Table:
                 tail_page_index = tail_page_index_offset_tuple[0]
                 tail_page_offset = tail_page_index_offset_tuple[1]
                 tail_page = page_range.tail_pages[tail_page_index]
+                if tail_page == None:
+                    # Fetch the page from disk
+                    tail_page = self.tail_page_manager.fetch(page_range.id_num, tail_page_index)
+                    page_range.base_pages[page_range.id_num] = tail_page
+
                 # print("tail_page size", tail_page.num_records, "offset", tail_page_offset)
                 tail_data = tail_page.get_record_int(tail_page_offset)
 
@@ -335,6 +326,11 @@ class Table:
                 tps_tail_page_index = tps_tail_page_index_offset_tuple[0]
                 tps_tail_page_offset = tps_tail_page_index_offset_tuple[1]
                 tps_tail_page = page_range.tail_pages[tps_tail_page_index]
+                if tps_tail_page == None:
+                    # Fetch the page from disk
+                    tail_page = self.tail_page_manager.fetch(page_range.id_num, tps_tail_page_index)
+                    page_range.base_pages[page_range.id_num] = tail_page
+
                 tps_tail_data = tps_tail_page.get_record_int(tps_tail_page_offset)
 
                 if (tail_page_offset == 0):
@@ -346,6 +342,11 @@ class Table:
                         indirection_index = tp_dir[INDIRECTION_COLUMN][0]
                         indirection_offset = tp_dir[INDIRECTION_COLUMN][1]
                         indirection_page = page_range.tail_pages[indirection_index]
+                        if indirection_page == None:
+                            # Fetch the page from disk
+                            indirection_page = self.tail_page_manager.fetch(page_range.id_num, indirection_index)
+                            page_range.base_pages[indirection_index] = indirection_page
+
                         indirection_value = indirection_page.get_record_int(indirection_offset)
 
                         # Break if we reached last merge
@@ -363,6 +364,11 @@ class Table:
                         # Get TPS from same TPS page at same offset that tail_data is coming from
                         correct_tps_tail_page = self.tail_page_directory[indirection_value][TPS_COLUMN]
                         tps_tail_page = page_range.tail_pages[correct_tps_tail_page[0]]
+                        if tps_tail_page == None:
+                            # Fetch the page from disk
+                            tps_tail_page = self.tail_page_manager.fetch(page_range.id_num, correct_tps_tail_page[0])
+                            page_range.base_pages[correct_tps_tail_page[0]] = tail_page
+
                         tps_tail_data = tps_tail_page.get_record_int(correct_tps_tail_page[1])
 
                 # Append found most recent data to columns
