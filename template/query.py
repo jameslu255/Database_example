@@ -218,7 +218,7 @@ class Query:
     # Update a record with specified key and columns
     """
     def update(self, key, *columns):
-        print(f"Update: key = {key} columns = {columns}")
+        # print(f"Update: key = {key} columns = {columns}")
         self.table.tail_rid += 1
         
         # Tail record default values
@@ -364,7 +364,7 @@ class Query:
         # might need to do this? not sure hmmm will make it super slow tho :(
         # cur_pr_copy = copy.deepcopy(cur_pr)
         if (cur_pr.update_count >= ((4 + self.table.num_columns + 1) * 2)): # two sets of tail pages
-            print("merging limit reached: " + str(cur_pr.update_count) + " in " + str(pr_id))
+            # print("merging limit reached: " + str(cur_pr.update_count) + " in " + str(pr_id))
             cur_pr.update_count = 0
             self.table.merge(cur_pr)
         # print("length tail page of cur pr : " + str(len(cur_pr.tail_pages)))
