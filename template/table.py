@@ -374,7 +374,7 @@ class Table:
                         if tail_page == None:
                             # Fetch the page from disk
                             tail_page = self.tail_page_manager.fetch(page_range.id_num, correct_tail_page[0])
-                            page_range.base_pages[correct_tail_page[0]] = tail_page
+                            page_range.tail_pages[correct_tail_page[0]] = tail_page
 
 
                         tail_data = tail_page.get_record_int(correct_tail_page[1])
