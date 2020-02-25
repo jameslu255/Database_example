@@ -128,12 +128,50 @@ class Table:
         # Copy base pages
         # [ 0    1     2      3     4    5   6   7 ]
         # [IND  RID  TIME  SCHEMA  TPS  KEY  G1  G2]
+        if page_range.base_pages[TPS_COLUMN] == None:
+            # If we don't have enough space to bring in another page
+            self.check_need_evict()
+
+            # Fetch the page from disk
+            cur_page = self.base_page_manager.fetch(page_range.id_num, TPS_COLUMN)
+            page_range.base_pages[TPS_COLUMN] = cur_page
+            self.size += 1
+
+        if page_range.base_pages[INDIRECTION_COLUMN] == None:
+            # If we don't have enough space to bring in another page
+            self.check_need_evict()
+
+            # Fetch the page from disk
+            cur_page = self.base_page_manager.fetch(page_range.id_num, INDIRECTION_COLUMN)
+            page_range.base_pages[INDIRECTION_COLUMN] = cur_page
+            self.size += 1
+
+        if page_range.base_pages[RID_COLUMN] == None:
+            # If we don't have enough space to bring in another page
+            self.check_need_evict()
+
+            # Fetch the page from disk
+            cur_page = self.base_page_manager.fetch(page_range.id_num, RID_COLUMN)
+            page_range.base_pages[RID_COLUMN] = cur_page
+            self.size += 1
+
+
         base_pages_copy = copy.deepcopy(page_range.base_pages)
 
         # Get pages of columns that we need to read info from to perform merge
         rid_page = base_pages_copy[RID_COLUMN]  # Get RIDs
+
         indirection_page = base_pages_copy[INDIRECTION_COLUMN]  # Get Indirection
         tps_page = base_pages_copy[TPS_COLUMN]  # Get TPS
+        if tps_page == None:
+            # If we don't have enough space to bring in another page
+            self.check_need_evict()
+
+            # Fetch the page from disk
+            cur_page = self.tail_page_manager.fetch(cur_pr.id_num, index_relative)
+            self.page_ranges[pr_id].tail_pages[index_relative] = cur_page
+            self.size += 1
+
 
         # First RID in this page range
         start_rid = (page_range.id_num * PAGE_RANGE_MAX_RECORDS) + 1
