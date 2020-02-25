@@ -1,19 +1,19 @@
-from lstore.db import Database
-from lstore.query import Query
-from lstore.config import init
+from template.db import Database
+from template.query import Query
+#from lstore.config import init
 
 from random import choice, randint, sample, seed
 
-init()
+#init()
 db = Database()
-# db.open('~/ECS165')
+db.open('ECS165')
 # Student Id and 4 grades
 grades_table = db.create_table('Grades', 5, 0)
 query = Query(grades_table)
 
 records = {}
 seed(3562901)
-for i in range(0, 1000):
+for i in range(0, 10):
     key = 92106429 + i
     records[key] = [key, randint(0, 20), randint(0, 20), randint(0, 20), randint(0, 20)]
     query.insert(*records[key])

@@ -23,7 +23,7 @@ class Index:
         else:
             self.btree_list[column_num].insert(key, {value})
     def create_dictionary(self, column_num, key, value):
-        self.btree_list[column_num].insert(key, value)
+        self.btree_list[column_num].insert(key, {value})
 
     def update_btree(self, column_num, key, value, new_key):
         #print("Student score is " + str(key) + " and RID of student is " + str(value) + " and new score is " + str(new_key))
