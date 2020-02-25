@@ -32,7 +32,7 @@ def print_header_line(count):
 
 # -------------------- Measuring Insert Performance --------------------
 insert_time_0 = process_time()
-for i in range(0, 630):
+for i in range(0, 520):
     query.insert(906659671 + i, 93, 0)
     keys.append(906659671 + i)
 insert_time_1 = process_time()
@@ -79,14 +79,18 @@ update_cols = [
 ]
 
 update_time_0 = process_time()
-for i in range(0, 630):
+for i in range(0, 515):
     # query.update(choice(keys), *(choice(update_cols)))
     query.update(906659671 + i, *[None,88,None])
+for i in range(0, 3):
+    # query.update(choice(keys), *(choice(update_cols)))
+    query.update(906660189, *[None,88,None])
 update_time_1 = process_time()
 # # -------------------- Print Table --------------------
+print("--------------AFTER UPDATE----------------------")
 for (i, y) in enumerate(grades_table.page_ranges):
     print_header_line(104)
-    page_range_header = PAGE_RANGE + str(i)
+    page_range_header = PAGE_RANGE + str(y.id_num)
     print(page_range_header.center(100, ' '))
     print_header_line(104)
     print(BASE_PAGES.center(104, ' '))
@@ -106,43 +110,43 @@ for (i, y) in enumerate(grades_table.page_ranges):
             print(str(val).center(12, ' '), end='|')
         print()
 #
-#     num_tail_pages = len(y.tail_pages)
-#     num_tail_page_sets = int(num_tail_pages / (grades_table.num_columns + 5))
-#     tail_page_set_start = 0
-#     tail_page_set_end = 4 + grades_table.num_columns + 1
-#     for n in range(num_tail_page_sets):
-#         tail_page_header = TAIL_PAGE + str(n)
-#         print(tail_page_header.center(104, ' '))
-#         print(INDIRECTION.center(12, ' '), end='|')
-#         print(RID.center(12, ' '), end='|')
-#         print(TIME.center(12, ' '), end='|')
-#         print(SCHEMA.center(12, ' '), end='|')
-#         print(BASE_RID.center(12, ' '), end='|')
-#         print(KEY.center(12, ' '), end='|')
-#         print(G1.center(12, ' '), end='|')
-#         print(G2.center(12, ' '), end='|')
-#         print()
-#         current_tail_page = y.tail_pages[tail_page_set_start]
-#         for x in range(current_tail_page.num_records):
-#             for (page_num, page) in enumerate(y.tail_pages[tail_page_set_start:tail_page_set_end]):
-#                 byte_val = page.data[x * 8:(x * 8 + 8)]
-#                 val = int.from_bytes(byte_val, "big")
-#                 print(str(val).center(12, ' '), end='|')
-#                 # if page_num == tail_page_set_end:
-#                 #     break
-#             print()
-#         tail_page_set_start += 4 + grades_table.num_columns + 1
-#         tail_page_set_end += 4 + grades_table.num_columns + 1
-#     print_header_line(104)
+    num_tail_pages = len(y.tail_pages)
+    num_tail_page_sets = int(num_tail_pages / (grades_table.num_columns + 5))
+    tail_page_set_start = 0
+    tail_page_set_end = 4 + grades_table.num_columns + 1
+    for n in range(num_tail_page_sets):
+        tail_page_header = TAIL_PAGE + str(n)
+        print(tail_page_header.center(104, ' '))
+        print(INDIRECTION.center(12, ' '), end='|')
+        print(RID.center(12, ' '), end='|')
+        print(TIME.center(12, ' '), end='|')
+        print(SCHEMA.center(12, ' '), end='|')
+        print(BASE_RID.center(12, ' '), end='|')
+        print(KEY.center(12, ' '), end='|')
+        print(G1.center(12, ' '), end='|')
+        print(G2.center(12, ' '), end='|')
+        print()
+        current_tail_page = y.tail_pages[tail_page_set_start]
+        for x in range(current_tail_page.num_records):
+            for (page_num, page) in enumerate(y.tail_pages[tail_page_set_start:tail_page_set_end]):
+                byte_val = page.data[x * 8:(x * 8 + 8)]
+                val = int.from_bytes(byte_val, "big")
+                print(str(val).center(12, ' '), end='|')
+                # if page_num == tail_page_set_end:
+                #     break
+            print()
+        tail_page_set_start += 4 + grades_table.num_columns + 1
+        tail_page_set_end += 4 + grades_table.num_columns + 1
+    print_header_line(104)
 # # ----------------------------------------------------------------------------------------------------
 print("Updating 10 records took:  \t\t\t", update_time_1 - update_time_0)
 print()
 
 
 # -------------------- Measuring Merge Performance --------------------
-merge_time_0 = process_time()
+# merge_time_0 = process_time()
 # grades_table.merge(grades_table.page_ranges[0])
-merge_time_1 = process_time()
+# merge_time_1 = process_time()
 # -------------------- Print Table --------------------
 # for (i, y) in enumerate(grades_table.page_ranges):
 #     print_header_line(104)
@@ -196,5 +200,5 @@ merge_time_1 = process_time()
 #         tail_page_set_end += 8
 #     print_header_line(104)
 # ----------------------------------------------------------------------------------------------------
-print("Merging 10 records took:  \t\t\t", merge_time_1 - merge_time_0)
+# print("Merging 10 records took:  \t\t\t", merge_time_1 - merge_time_0)
 

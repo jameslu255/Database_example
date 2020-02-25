@@ -102,7 +102,7 @@ class Table:
         return self.page_ranges[pr_id]
 
     def merge(self, page_range):
-        print("MERGE!!")
+        # print("MERGE!!")
         # GAME PLAN:
         # Make a copy of the base pages
         # Go through every row (every RID) in the base pages
@@ -131,7 +131,7 @@ class Table:
         for i in range(start_rid, end_rid + 1):
             offset = i - (PAGE_RANGE_MAX_RECORDS * page_range.id_num)
             rid_data = rid_page.get_record_int(offset)
-            print("looking into rid: " + str(rid_data))
+            # print("looking into rid: " + str(rid_data))
             if rid_data != 0: # check if rid was not deleted
                 indirection = indirection_page.get_record_int(offset)
                 tps = tps_page.get_record_int(offset)
@@ -139,7 +139,7 @@ class Table:
                 # ------------------------- MERGE -------------------------
                 # Only merge records that have had updates since last merge
                 if indirection > tps:
-                    print("conidtion indir greater than tps")
+                    # print("conidtion indir greater than tps")
                     # Get most recent values for this record
                     query_columns = []
                     for j in range(self.num_columns):
@@ -148,46 +148,15 @@ class Table:
                     # Select's return format: [TPS#, columns[]]
                     new_tps = select_return[0]
                     columns = select_return[1]
-                    print("!!!!!!!!!!!!! columns " + str(columns))
+                    # print("!!!!!!!!!!!!! columns " + str(columns))
                     # print(f"Data from select for RID {i}: {columns}")
 
                     # Update TPS and New Values
-                    if i > 490:
-                        print("!!! new tps: " + str(new_tps))
-                    self.replace(i, base_pages_copy, TPS_COLUMN, new_tps)
+                    self.replace(offset, base_pages_copy, TPS_COLUMN, new_tps)
                     column_index = KEY_COLUMN     # index of the column that we are merging
                     for value in columns:
-                        self.replace(i, base_pages_copy, column_index, value)
+                        self.replace(offset, base_pages_copy, column_index, value)
                         column_index += 1
-
-        print("!!!!!!!!! BASE PAGES COPY VALUES !!!!!!!!! ")
-        # for (i, y) in enumerate(grades_table.page_ranges):
-        print_header_line(104)
-        page_range_header = PAGE_RANGE + str(i)
-        print(page_range_header.center(104, ' '))
-        print_header_line(104)
-        print(BASE_PAGES.center(104, ' '))
-        print(INDIRECTION.center(12, ' '), end='|')
-        print(RID.center(12, ' '), end='|')
-        print(TIME.center(12, ' '), end='|')
-        print(SCHEMA.center(12, ' '), end='|')
-        print(TPS.center(12, ' '), end='|')
-        print(KEY.center(12, ' '), end='|')
-        print(G1.center(12, ' '), end='|')
-        print(G2.center(12, ' '), end='|')
-        print()
-        for x in range(base_pages_copy[0].num_records):
-            for (page_num, page) in enumerate(base_pages_copy):
-                byte_val = page.data[x * 8:(x * 8 + 8)]
-                val = int.from_bytes(byte_val, "big")
-                # print("{0: 10d}".format(val), end=' ')
-                print(str(val).center(12, ' '), end='|')
-            print()
-
-
-
-
-
 
         # Update real base pages
         # [no   no    no     no    yes  yes yes yes]
@@ -200,7 +169,7 @@ class Table:
                 offset = rid - (PAGE_RANGE_MAX_RECORDS * page_range.id_num)
                 value = base_pages_copy[i].get_record_int(offset)
                 # Lock
-                self.replace(rid, page_range.base_pages, i, value)
+                self.replace(offset, page_range.base_pages, i, value)
                 # Unlock
     # TODO: where to put merge? in query.update?
         # how to make it a thread?

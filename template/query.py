@@ -231,8 +231,7 @@ class Query:
         # Get current page range
         pr_id = rid_base // (PAGE_RANGE_MAX_RECORDS + 1)
         cur_pr = self.table.page_ranges[pr_id]
-        # Update number of updates for current page range
-        cur_pr.update_count += 1
+
 
         # Get relative rid to new page range since it starts at 0
         rid_offset = rid_base - (PAGE_RANGE_MAX_RECORDS * pr_id)
@@ -254,6 +253,8 @@ class Query:
                 tail_page_directory.append((page_index, page.num_records))
             # update tail page directory
             self.table.tail_page_directory[rid] = tail_page_directory
+            
+            cur_pr.update_count += (5 + self.table.num_columns)
         # Already initialized tail pages
         else:
             # check if a tail record was created for this key in this page 
@@ -297,6 +298,8 @@ class Query:
                         tail_page_directory.append((page_index, page.num_records))
                     # update tail page directory: set map of RID -> tail page indexes
                     self.table.tail_page_directory[rid] = tail_page_directory
+                    # Update number of updates for current page range
+                    cur_pr.update_count += (5 + self.table.num_columns)
                     
             
         # find schema encoding of the new tail record
@@ -360,11 +363,13 @@ class Query:
 
         # might need to do this? not sure hmmm will make it super slow tho :(
         # cur_pr_copy = copy.deepcopy(cur_pr)
-        if (cur_pr.update_count % 100) == 0:
+        if (cur_pr.update_count >= ((4 + self.table.num_columns + 1) * 2)): # two sets of tail pages
+            print("merging limit reached: " + str(cur_pr.update_count) + " in " + str(pr_id))
+            cur_pr.update_count = 0
             self.table.merge(cur_pr)
         # print("length tail page of cur pr : " + str(len(cur_pr.tail_pages)))
-        # if(len(cur_pr.tail_pages) >= ((4 + self.table.num_columns + 1))*1):
-        #     self.table.merge(cur_pr)
+        # if(len(cur_pr.tail_pages) >= ((4 + self.table.num_columns + 1))*2):
+            # self.table.merge(cur_pr)
 
 
     """
