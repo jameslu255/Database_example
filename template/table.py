@@ -102,7 +102,7 @@ class Table:
         return self.page_ranges[pr_id]
 
     def merge(self, page_range):
-        print("MERGE!!")
+        # print("MERGE!!")
         # GAME PLAN:
         # Make a copy of the base pages
         # Go through every row (every RID) in the base pages

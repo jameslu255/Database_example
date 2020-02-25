@@ -81,13 +81,12 @@ update_cols = [
 update_time_0 = process_time()
 for i in range(0, 515):
     # query.update(choice(keys), *(choice(update_cols)))
-    query.update(906659671 + i, *[None,88,None])
+    query.update(906659671 + i, *[None, 88, None])
 for i in range(0, 3):
     # query.update(choice(keys), *(choice(update_cols)))
-    query.update(906660189, *[None,88,None])
+    query.update(906660189, *[None, 88, None])
 update_time_1 = process_time()
 # # -------------------- Print Table --------------------
-print("--------------AFTER UPDATE----------------------")
 for (i, y) in enumerate(grades_table.page_ranges):
     print_header_line(104)
     page_range_header = PAGE_RANGE + str(y.id_num)
