@@ -138,21 +138,26 @@ class Query:
         schema_page = page_range.base_pages[schema_page_index]
         schema_data_int = schema_page.get_record_int(offset)
 
+        # Get TPS column
+        tps_page_index = base_page_indices[TPS_COLUMN]
+        tps_page = page_range.base_pages[tps_page_index]
+        tps_data = tps_page.get_record_int(offset)
+
         # Get desired columns' page indices
         columns = []
         for i in range(len(query_columns)):
             # Check schema (base page or tail page?)
             # If base page
             has_prev_tail_pages = self.bit_is_set(i+ NUM_CONSTANT_COLUMNS, schema_data_int)
-            if query_columns[i] == 1 and not has_prev_tail_pages:
+            if indirection_data <= tps_data or (query_columns[i] == 1 and not has_prev_tail_pages):
                 base_page_index = base_page_indices[i+NUM_CONSTANT_COLUMNS]
                 base_page = page_range.base_pages[base_page_index]
                 base_data = base_page.get_record_int(offset)
                 # print("index",i,"appending base data", base_data)
                 columns.append(base_data)
                 # print(f"Column {i+NUM_CONSTANT_COLUMNS} -> Base Page Index: {base_page_index} -> Data: {base_data}")
-            # If tail page
-            elif query_columns[i] == 1 and has_prev_tail_pages:# query this column, but it's been updated before
+            # If tail page query this column, but it's been updated before
+            elif (query_columns[i] == 1 and has_prev_tail_pages):
                 # get tail page value of this column 
                 # grab index and offset of this tail page
                 column_index = i + NUM_CONSTANT_COLUMNS
