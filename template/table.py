@@ -1,13 +1,47 @@
 from template.page import *
 from template.page_range import *
 from template.index import *
+import copy
 
 from time import time
 
+
+# ============== FOR PRINTING ==============
+# Header Constants
+PAGE_RANGE = "PAGE RANGE "
+BASE_PAGES = "Base Pages"
+TAIL_PAGE = "Tail Page "
+INDIRECTION = "indirection"
+RID = "RID"
+TIME = "time"
+SCHEMA = "schema"
+TPS = "TPS"
+BASE_RID = "Base RID"
+KEY = "key"
+G1 = "G1"
+G2 = "G2"
+
+def print_header_line(count):
+    for j in range(count):
+        print("_", end='')
+    print()
+
+#  ============== ============== ============== ==============
+
+# Column Indices Constants
 INDIRECTION_COLUMN = 0
 RID_COLUMN = 1
 TIMESTAMP_COLUMN = 2
 SCHEMA_ENCODING_COLUMN = 3
+TPS_COLUMN = 4
+BASE_RID_COLUMN = 4
+
+# Number of constant columns
+NUM_CONSTANT_COLUMNS = 5
+# Key column is always 6th column (first column before data columns)
+KEY_COLUMN = 5
+# Maximum number of records a page range can hold
+PAGE_RANGE_MAX_RECORDS = 512
 
 
 class Record:
@@ -19,6 +53,7 @@ class Record:
 
     def __str__(self):
         return f"Record(RID: {self.rid}, Columns: {self.columns})"
+
 
 class Table:
     """
@@ -38,7 +73,7 @@ class Table:
         self.base_page_directory = {}
         # RID -> Page_tail
         self.tail_page_directory = {}
-        
+
         # number of records a table has
         self.base_rid = 0
         # tail page id
@@ -54,24 +89,205 @@ class Table:
         self.page_ranges.append(PageRange(self.cur_page_range_id, self.num_columns))
 
         # create pages for the indirection, rid, timestamp, schema encoding column
-        self.create_base_page("indirection")  # index 0
-        self.create_base_page("rid")  # index 1
-        self.create_base_page("timestamp")  # index 2
-        self.create_base_page("schema")  # index 3
+        self.create_base_page("indirection")    # index 0
+        self.create_base_page("rid")            # index 1
+        self.create_base_page("timestamp")      # index 2
+        self.create_base_page("schema")         # index 3
+        self.create_base_page("tps")            # index 4
 
         # create pages for the key and the data columns
         for x in range(num_columns):
             self.create_base_page(x)
 
-    def __merge(self):
+    def get_page_range(self, base_rid):
+        pr_id = (base_rid // (PAGE_RANGE_MAX_RECORDS + 1))  # given the base_rid we can find the page range we want
+        return self.page_ranges[pr_id]
+
+    def merge(self, page_range):
+        # print("MERGE!!")
+        # GAME PLAN:
+        # Make a copy of the base pages
+        # Go through every row (every RID) in the base pages
+        # For each row:
+        #     Check indirection (if indirection > TPS: merge for this row)
+        #     Merge:
+        #         Call select to obtain most recent updates
+        #         Modify base pages copy
+
+        # Copy base pages
+        # [ 0    1     2      3     4    5   6   7 ]
+        # [IND  RID  TIME  SCHEMA  TPS  KEY  G1  G2]
+        base_pages_copy = copy.deepcopy(page_range.base_pages)
+
+        # Get pages of columns that we need to read info from to perform merge
+        rid_page = base_pages_copy[RID_COLUMN]  # Get RIDs
+        indirection_page = base_pages_copy[INDIRECTION_COLUMN]  # Get Indirection
+        tps_page = base_pages_copy[TPS_COLUMN]  # Get TPS
+
+        # First RID in this page range
+        start_rid = (page_range.id_num * PAGE_RANGE_MAX_RECORDS) + 1
+        # Last RID in this page range
+        end_rid = start_rid + rid_page.num_records - 1
+
+        # Go through every row (every RID) --> i = RID
+        for i in range(start_rid, end_rid + 1):
+            offset = i - (PAGE_RANGE_MAX_RECORDS * page_range.id_num)
+            rid_data = rid_page.get_record_int(offset)
+            # print("looking into rid: " + str(rid_data))
+            if rid_data != 0: # check if rid was not deleted
+                indirection = indirection_page.get_record_int(offset)
+                tps = tps_page.get_record_int(offset)
+
+                # ------------------------- MERGE -------------------------
+                # Only merge records that have had updates since last merge
+                if indirection > tps:
+                    # print("conidtion indir greater than tps")
+                    # Get most recent values for this record
+                    query_columns = []
+                    for j in range(self.num_columns):
+                        query_columns.append(1)
+                    select_return = self.select(page_range, i, query_columns, 0, tps, base_pages_copy)
+                    # Select's return format: [TPS#, columns[]]
+                    new_tps = select_return[0]
+                    columns = select_return[1]
+                    # print("!!!!!!!!!!!!! columns " + str(columns))
+                    # print(f"Data from select for RID {i}: {columns}")
+
+                    # Update TPS and New Values
+                    self.replace(offset, base_pages_copy, TPS_COLUMN, new_tps)
+                    column_index = KEY_COLUMN     # index of the column that we are merging
+                    for value in columns:
+                        self.replace(offset, base_pages_copy, column_index, value)
+                        column_index += 1
+
+        # Update real base pages
+        # [no   no    no     no    yes  yes yes yes]
+        # [ 0    1     2      3     4    5   6   7 ]
+        # [IND  RID  TIME  SCHEMA  TPS  KEY  G1  G2]
+        start_col = NUM_CONSTANT_COLUMNS - 1        # 5-1 = 4
+        end_col = start_col + self.num_columns      # 4+3 = 7
+        for i in range(start_col, end_col + 1):
+            for rid in range(start_rid, end_rid + 1):
+                offset = rid - (PAGE_RANGE_MAX_RECORDS * page_range.id_num)
+                value = base_pages_copy[i].get_record_int(offset)
+                # Lock
+                self.replace(offset, page_range.base_pages, i, value)
+                # Unlock
+    # TODO: where to put merge? in query.update?
+        # how to make it a thread?
+        # update select so that if tps < indirection look at base pages and go to tail pages otherwise
         pass
+
+
+
+
+    # call example: self.replace(i, base_pages_copy, TPS_COLUMN, new_tps)
+    def replace(self, rid, base_pages, column_index, value):
+        base_page = base_pages[column_index]
+        base_page.set_record(rid, value)
+
+
+    # Change so that don't start at very bottom, but rather start at merge point
+    def select(self, page_range, rid, query_columns, start_TID, stop_TID, base_pages):
+        # print(f"----------------------------------- select -----------------------------------")
+        # get relative rid to new page range since it starts at 0
+        offset = rid - (PAGE_RANGE_MAX_RECORDS * page_range.id_num)
+
+        # Get and check indirection
+        indirection_page = base_pages[INDIRECTION_COLUMN]
+        indirection_data = indirection_page.get_record_int(offset)
+        if indirection_data != 0:
+            tail_page_indices = self.tail_page_directory[indirection_data]
+
+        # Get schema
+        schema_page = base_pages[SCHEMA_ENCODING_COLUMN]
+        schema_data_int = schema_page.get_record_int(offset)
+
+        # Get desired columns' page indices
+        data = []
+        tps = 0
+        columns = []
+        for i in range(len(query_columns)):
+            column_index = i + NUM_CONSTANT_COLUMNS
+            # Check schema (base page or tail page? --> Has been updated before?)
+            has_prev_tail_pages = self.bit_is_set(column_index, schema_data_int)
+
+            # If base page
+            if query_columns[i] == 1 and not has_prev_tail_pages:
+                base_page = base_pages[column_index]
+                base_data = base_page.get_record_int(offset)
+                # print("index",i,"appending base data", base_data)
+                columns.append(base_data)
+                # print(f"Column {i+5} -> Base Page Index: {base_page_index} -> Data: {base_data}")
+
+            # If tail page
+            elif query_columns[i] == 1 and has_prev_tail_pages:
+                # get tail page value of this column
+                # grab index and offset of this tail page
+                tail_page_index_offset_tuple = tail_page_indices[column_index]
+                # print(f"tail_page (page index, offset): {tail_page_index_offset_tuple}")
+                tail_page_index = tail_page_index_offset_tuple[0]
+                tail_page_offset = tail_page_index_offset_tuple[1]
+                tail_page = page_range.tail_pages[tail_page_index]
+                # print("tail_page size", tail_page.num_records, "offset", tail_page_offset)
+                tail_data = tail_page.get_record_int(tail_page_offset)
+
+                # Get TPS
+                tps_tail_page_index_offset_tuple = tail_page_indices[TPS_COLUMN]
+                tps_tail_page_index = tps_tail_page_index_offset_tuple[0]
+                tps_tail_page_offset = tps_tail_page_index_offset_tuple[1]
+                tps_tail_page = page_range.tail_pages[tps_tail_page_index]
+                tps_tail_data = tps_tail_page.get_record_int(tps_tail_page_offset)
+
+                if (tail_page_offset == 0):
+                    # we are in the right column, but the wrong tail page associated with it (spanning new tail pages every time)
+                    offset_exists = tail_page_offset
+                    indirection_value = indirection_data
+                    while (offset_exists == 0):  # while the current tail page doesn't have a value
+                        tp_dir = self.tail_page_directory[indirection_value]
+                        indirection_index = tp_dir[INDIRECTION_COLUMN][0]
+                        indirection_offset = tp_dir[INDIRECTION_COLUMN][1]
+                        indirection_page = page_range.tail_pages[indirection_index]
+                        indirection_value = indirection_page.get_record_int(indirection_offset)
+
+                        # Break if we reached last merge
+                        if indirection_value == stop_TID:
+                            break
+                        column_tuple = self.tail_page_directory[indirection_value][column_index]
+                        offset_exists = column_tuple[1]
+
+                    if (offset_exists != 0):  # there exists something in this page
+                        correct_tail_page = self.tail_page_directory[indirection_value][column_index]
+                        tail_page = page_range.tail_pages[correct_tail_page[0]]
+                        tail_data = tail_page.get_record_int(correct_tail_page[1])
+                        # print("correct tail page data is in index",correct_tail_page[0],correct_tail_page[1])
+
+                        # Get TPS from same TPS page at same offset that tail_data is coming from
+                        correct_tps_tail_page = self.tail_page_directory[indirection_value][TPS_COLUMN]
+                        tps_tail_page = page_range.tail_pages[correct_tps_tail_page[0]]
+                        tps_tail_data = tps_tail_page.get_record_int(correct_tps_tail_page[1])
+
+                # Append found most recent data to columns
+                columns.append(tail_data)
+                # Find most recent update TPS
+                current_tps = tps_tail_data
+                if current_tps > tps:
+                    tps = current_tps
+        # [TPS_value, [data_value1 data_value2 data_value3 ...]]
+        data.append(tps)
+        data.append(columns)
+        return data
+
+
+    def bit_is_set(self, column, schema_enc):
+        mask = 1 << (NUM_CONSTANT_COLUMNS + self.num_columns - column - 1)
+        return schema_enc & mask > 0
 
     def create_tail_page(self, col, base_rid):
         # get the base_page that's getting updated rid (passed in as base_rid)
         # find the page range that base_page is in
         # add the tail page to that page range
-        pr_id = (base_rid // (512 + 1))  # given the base_rid we can find the page range we want
-        cur_pr = self.page_ranges[pr_id]
+        cur_pr = self.get_page_range(base_rid)
 
         # create the page and push to array holding pages
         new_page = Page()
@@ -80,7 +296,7 @@ class Table:
         cur_pr.tail_pages.append(new_page)
 
         # keep track of index of page relative to array index
-        if (len(cur_pr.free_tail_pages) < self.num_columns + 4):  # when initializing
+        if (len(cur_pr.free_tail_pages) < self.num_columns + 5):  # when initializing
             cur_pr.free_tail_pages.append(len(cur_pr.tail_pages) - 1)
             # self.free_tail_pages.append(len(self.tail_pages) - 1)
         else:  # when creating new page and need to update the index
@@ -88,11 +304,10 @@ class Table:
 
         cur_pr.num_tail_pages += 1
 
-    def update_tail_page(self, col, value, base_rid):
-        pr_id = base_rid // (512 + 1)  # given the base_rid we can find the page range we want
+    def append_tail_page_record(self, col, value, base_rid):
         # update the page linked to the col
         # print(str(col) + " writing val: " + str(value) + " of type " + str(type(value)))
-        cur_pr = self.page_ranges[pr_id]
+        cur_pr = self.get_page_range(base_rid)
         index_relative = cur_pr.free_tail_pages[col]
         # index_relative = self.free_tail_pages[col]
         pg = cur_pr.tail_pages[index_relative]
@@ -111,27 +326,23 @@ class Table:
             # update free page index to point to new blank page
             cur_pr.free_tail_pages[col] = len(cur_pr.tail_pages) - 1
             # self.free_pages[col].append(len(pages) - 1)
-        if cur_pr.end_rid_tail == 0:
-            cur_pr.start_rid_tail = self.tail_rid
-
-        cur_pr.end_rid_tail = self.tail_rid
 
     def update_tail_rid(self, column_index, rid, value, base_rid):
-        pr_id = base_rid // (512 + 1)
+        pr_id = base_rid // (PAGE_RANGE_MAX_RECORDS + 1)
         cur_pr = self.page_ranges[pr_id]
         # if (column_index < 0):
-            # print("updating a rid in tail " + str(column_index) + " out of bounds")
+        # print("updating a rid in tail " + str(column_index) + " out of bounds")
         # print("updating tail rid " + str(rid) + " @ col " + str(column_index) + " with value: " + str(value))
         cur_pr.tail_pages[column_index].set_record(rid, value)
 
     def update_base_rid(self, column_index, rid, value):
-        pr_id = rid // (512 + 1)
+        pr_id = rid // (PAGE_RANGE_MAX_RECORDS + 1)
         cur_pr = self.page_ranges[pr_id]
         # if (column_index < 0 or column_index > self.num_columns):
-            # print("updating a rid in base " + str(column_index) + " out of bounds")
+        # print("updating a rid in base " + str(column_index) + " out of bounds")
         # print("updating rid " + str(rid) + " @ col " + str(column_index) + " with value: " + str(value))
         base_page_index = cur_pr.free_base_pages[column_index]
-        base_offset = rid - (512 * pr_id)
+        base_offset = rid - (PAGE_RANGE_MAX_RECORDS * pr_id)
         cur_pr.base_pages[base_page_index].set_record(base_offset, value)
 
     def create_base_page(self, col_name):
@@ -146,23 +357,23 @@ class Table:
         cur_pr.base_pages.append(new_page)
         cur_pr.free_base_pages.append(len(cur_pr.base_pages) - 1)
 
-    def update_base_page(self, index, value, rid):
+    def append_base_page_record(self, index, value, rid):
         # print("updating col", index, "with", value, "for rid", rid)
         # update the page linked to the index
-        pr_id = rid // (512 + 1)
+        pr_id = rid // (PAGE_RANGE_MAX_RECORDS + 1)
         # index_relative = self.free_base_pages[index]
         # print("pr_id", pr_id)
-        
-        if pr_id >= len(self.page_ranges): #no new page range
+
+        if pr_id >= len(self.page_ranges):  # no new page range
             # make new page range
             # print("making new pange range")
             self.cur_page_range_id += 1  # this pr is full - update the pr id
             new_pr = PageRange(self.cur_page_range_id, self.num_columns)
             self.page_ranges.append(new_pr)  # add this new pr with new id to the PR list
             # initialize base pages on new pange range creation
-            for x in range(self.num_columns + 4):
+            for x in range(self.num_columns + 5):
                 self.create_base_page(x)
-            
+
         pr = self.page_ranges[pr_id]
         index_relative = pr.free_base_pages[index]
         error = pr.base_pages[index_relative].write(value)
@@ -177,15 +388,9 @@ class Table:
             page.write(value)
             pr.base_pages.append(page)
             pr.free_base_pages.append(len(pr.base_pages) - 1)
-            
+
             # increment the num pages count in either case (full or not full since we are adding a new page)
             pr.num_base_pages += 1
-
-        # print("current page range: " + str(cur_pr_id_num))
-        if pr.start_rid_base == 0:
-            pr.start_rid_base = self.base_rid
-
-        pr.end_rid_base = self.base_rid
 
     # creates a new page range if the current one gets filled up/does housekeeping stuff (update vals)
     def create_new_pr_if_necessary(self):
