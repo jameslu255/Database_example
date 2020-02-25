@@ -206,13 +206,34 @@ class Query:
             # Unpin the page
             self.table.base_page_manager.unpin(pr_id, schema_page_index)
             self.table.base_page_manager.update_page_usage(pr_id, schema_page_index)
+
+            # Get TPS column
+            tps_page_index = base_page_indices[TPS_COLUMN]
+            tps_page = page_range.base_pages[tps_page_index]
+            # Pin the page
+            self.table.base_page_manager.pin(pr_id, tps_page_index)
+            if(tps_page == None):
+                # if no space for new page
+                self.table.check_need_evict()
+                # Fetch page from disk
+                tps_page = self.table.base_page_manager.fetch(pr_id, tps_page_index)
+                self.table.page_ranges[pr_id].base_pages[tps_page_index] = tps_page
+                self.table.size += 1
+
+            tps_data = tps_page.get_record_int(offset)
+
+            # Unpin the page
+            self.table.base_page_manager.unpin(pr_id, tps_page_index)
+            self.table.base_page_manager.update_page_usage(pr_id, tps_page_index)
+
+
             # Get desired columns' page indices
             columns = []
             for i in range(len(query_columns)):
                 # Check schema (base page or tail page?)
                 # If base page
                 has_prev_tail_pages = self.bit_is_set(i+ NUM_CONSTANT_COLUMNS, schema_data_int)
-                if query_columns[i] == 1 and not has_prev_tail_pages:
+                if indirection_data <= tps_data or (query_columns[i] == 1 and not has_prev_tail_pages):
                     base_page_index = base_page_indices[i+NUM_CONSTANT_COLUMNS]
                     base_page = page_range.base_pages[base_page_index]
                     # If page is not in bufferpool, read from disk
