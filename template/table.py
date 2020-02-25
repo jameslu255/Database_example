@@ -273,12 +273,25 @@ class Table:
 
         # Get and check indirection
         indirection_page = base_pages[INDIRECTION_COLUMN]
+        if indirection_page == None:
+            # Fetch the page from disk
+            indirection_page = self.base_page_manager.fetch(page_range.id_num, INDIRECTION_COLUMN)
+            page_range.base_pages[INDIRECTION_COLUMN] = indirection_page
+
+
         indirection_data = indirection_page.get_record_int(offset)
         if indirection_data != 0:
             tail_page_indices = self.tail_page_directory[indirection_data]
 
         # Get schema
         schema_page = base_pages[SCHEMA_ENCODING_COLUMN]
+        if schema_page == None:
+            # Fetch the page from disk
+            schema_page = self.base_page_manager.fetch(page_range.id_num, SCHEMA_ENCODING_COLUMN)
+            page_range.base_pages[SCHEMA_ENCODING_COLUMN] = schema_page
+
+
+
         schema_data_int = schema_page.get_record_int(offset)
 
         # Get desired columns' page indices
@@ -295,7 +308,7 @@ class Table:
                 base_page = base_pages[column_index]
                 if base_page == None:
                     # Fetch the page from disk
-                    cur_page = self.base_page_manager.fetch(page_range.id_num, column_index)
+                    base_page = self.base_page_manager.fetch(page_range.id_num, column_index)
                     page_range.base_pages[column_index] = base_page
 
 
@@ -316,7 +329,7 @@ class Table:
                 if tail_page == None:
                     # Fetch the page from disk
                     tail_page = self.tail_page_manager.fetch(page_range.id_num, tail_page_index)
-                    page_range.base_pages[page_range.id_num] = tail_page
+                    page_range.tail_pages[tail_page_index] = tail_page
 
                 # print("tail_page size", tail_page.num_records, "offset", tail_page_offset)
                 tail_data = tail_page.get_record_int(tail_page_offset)
@@ -328,8 +341,8 @@ class Table:
                 tps_tail_page = page_range.tail_pages[tps_tail_page_index]
                 if tps_tail_page == None:
                     # Fetch the page from disk
-                    tail_page = self.tail_page_manager.fetch(page_range.id_num, tps_tail_page_index)
-                    page_range.base_pages[page_range.id_num] = tail_page
+                    tps_tail_page = self.tail_page_manager.fetch(page_range.id_num, tps_tail_page_index)
+                    page_range.tail_pages[tps_tail_page_index] = tps_tail_page
 
                 tps_tail_data = tps_tail_page.get_record_int(tps_tail_page_offset)
 
@@ -345,7 +358,7 @@ class Table:
                         if indirection_page == None:
                             # Fetch the page from disk
                             indirection_page = self.tail_page_manager.fetch(page_range.id_num, indirection_index)
-                            page_range.base_pages[indirection_index] = indirection_page
+                            page_range.tail_pages[indirection_index] = indirection_page
 
                         indirection_value = indirection_page.get_record_int(indirection_offset)
 
@@ -358,6 +371,12 @@ class Table:
                     if (offset_exists != 0):  # there exists something in this page
                         correct_tail_page = self.tail_page_directory[indirection_value][column_index]
                         tail_page = page_range.tail_pages[correct_tail_page[0]]
+                        if tail_page == None:
+                            # Fetch the page from disk
+                            tail_page = self.tail_page_manager.fetch(page_range.id_num, correct_tail_page[0])
+                            page_range.base_pages[correct_tail_page[0]] = tail_page
+
+
                         tail_data = tail_page.get_record_int(correct_tail_page[1])
                         # print("correct tail page data is in index",correct_tail_page[0],correct_tail_page[1])
 
@@ -367,7 +386,7 @@ class Table:
                         if tps_tail_page == None:
                             # Fetch the page from disk
                             tps_tail_page = self.tail_page_manager.fetch(page_range.id_num, correct_tps_tail_page[0])
-                            page_range.base_pages[correct_tps_tail_page[0]] = tail_page
+                            page_range.tail_pages[correct_tps_tail_page[0]] = tps_tail_page
 
                         tps_tail_data = tps_tail_page.get_record_int(correct_tps_tail_page[1])
 
