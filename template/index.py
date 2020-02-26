@@ -22,44 +22,52 @@ class Index:
             self.btree_list[column_num].insert(key, new_list)
         else:
             self.btree_list[column_num].insert(key, {value})
+
+    def remove_values(self, column_num, key, value):
+        #print("Removing value: " + str(value) + " on key: " + str(key) + " from column: " + str(column_num))
+        #print(value)
+        current_list = self.btree_list[column_num].get(key, "key not found")
+        current_key = key
+
+        # self.print_tree(column_num)
+        if (current_list == "key not found"):
+            found = False
+            prev_key = key
+            #print(column_num)
+            #print("Attempting fix")
+            while (found == False):
+                current_key = self.btree_list[column_num].minKey(prev_key)
+                #print(current_key)
+                current_list = self.btree_list[column_num].get(current_key, "key not found")
+                if (value in current_list):
+                    found = True
+                    #print("Fixed!")
+                prev_key = current_key + 1
+        # print("Students that got score at " + str(current_key) + " is " + str(current_list))
+        if (len(current_list) == 1):
+            self.btree_list[column_num].pop(current_key)
+        else:
+            if (value in current_list):
+                current_list.remove(value)
+            self.btree_list[column_num].__setitem__(current_key, current_list)
+
     def create_dictionary(self, column_num, key, value):
         self.btree_list[column_num].insert(key, {value})
 
     def update_btree(self, column_num, key, value, new_key):
-        #print("Student score is " + str(key) + " and RID of student is " + str(value) + " and new score is " + str(new_key))
-        current_list = self.btree_list[column_num].get(key, "key not found")
-        current_key = key
-
-        #self.print_tree(column_num)
-        if (current_list == "key not found"):
-            found = False
-            prev_key = key
-            print(column_num)
-            print("Attempting fix")
-            while (found == False):
-                current_key = self.btree_list[column_num].minKey(prev_key)
-                print(current_key)
-                current_list = self.btree_list[column_num].get(current_key, "key not found")
-                if (value in current_list):
-                    found = True
-                    print("Fixed!")
-                prev_key = current_key + 1
-        #print("Students that got score at " + str(current_key) + " is " + str(current_list))
-        if (len(current_list) == 1):
-            self.btree_list[column_num].pop(current_key)
+        if column_num == 0:
+            self.btree_list[column_num].pop(key)
+            self.btree_list[column_num].insert(new_key, {value})
         else:
-            if( value in current_list):
-                current_list.remove(value)
-            self.btree_list[column_num].__setitem__(current_key, current_list)
-        #print("Removed " + str(value) + " from list:" + str(current_key) + " -> " + str(self.btree_list[column_num].get(current_key, "Key was removed since it is empty now")))
-
-        current_list = self.btree_list[column_num].get(new_key, -1)
-        if (current_list == -1):
-            self.add_values(column_num, new_key, value)
-        else:
-            current_list.add(value)
-            self.btree_list[column_num].__setitem__(new_key, current_list)
-        #print("Added " + str(value) + " to list:" + str(new_key) + " -> " + str(self.btree_list[column_num].get(new_key)))
+            #print ("key is: " + str(key) + "value is: " + str(value) + "new_key is:" + str(new_key))
+            self.remove_values(column_num, key, value)
+            current_list = self.btree_list[column_num].get(new_key, -1)
+            if (current_list == -1):
+                self.add_values(column_num, new_key, value)
+            else:
+                current_list.add(value)
+                self.btree_list[column_num].__setitem__(new_key, current_list)
+            #print("Added " + str(value) + " to list:" + str(new_key) + " -> " + str(self.btree_list[column_num].get(new_key)))
 
 
     def print_trees(self):
@@ -88,7 +96,7 @@ class Index:
 
     def locate(self, value, column):
         #filters the btree by removing the all the values below lower_range
-        return self.btree_list[column].get(value, "Value does not exist.");
+        return self.btree_list[column].get(value, "F");
         pass
 
     """
