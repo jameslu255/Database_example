@@ -54,7 +54,7 @@ class Database():
     """
     def create_table(self, name, num_columns, key):
         for table in self.tables:
-            if table.name == table_name:
+            if table.name == name:
                 return table
 
         self.num_tables += 1

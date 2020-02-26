@@ -22,6 +22,14 @@ class Query:
         # get base rid
         #base_rid = self.table.keys[key]
         rids = self.table.index.get_value(0, key)
+        record = self.select(key, 0, [1, 1, 1, 1, 1])[0]
+        #print("record columns are : " + str(record.columns))
+        self.table.index.remove_values(0, key, list(rids)[0])
+        for i in range(len(record.columns)):
+            if i != 0:
+                self.table.index.remove_values(i, record.columns[i], list(rids)[0])
+
+
         for base_rid in rids:
             # grab current page range 
             # pr_id = rid_base // (max_page_size / 8)
@@ -153,7 +161,7 @@ class Query:
         record = []
         rids = self.table.index.locate(key, column)
         for rid in rids:
-            if (rid == "Key not found"):
+            if (rid == "F"):
                 return []
             # Find Page Range ID
             pr_id = rid // (PAGE_RANGE_MAX_RECORDS + 1)
@@ -565,6 +573,9 @@ class Query:
             if columns[x] != None:
                 # print(f"Appending value {columns[x]} into tail page at index {x + NUM_CONSTANT_COLUMNS}")
                 self.table.append_tail_page_record(x + NUM_CONSTANT_COLUMNS, columns[x], rid_base)
+                base_page_num = self.table.base_page_directory[rid_base][x + 5]
+                base_record_val = cur_pr.base_pages[base_page_num].get_record_int(rid_offset)
+                self.table.index.update_btree(x, base_record_val, rid_base, columns[x])  # james added this
         ### ------------------------------------------------------------------------------------------ ###
 
         # Add the indices to the tail page directory
@@ -629,6 +640,7 @@ class Query:
             # self.table.merge(cur_pr)
 
 
+
     """
     :param start_range: int         # Start of the key range to aggregate 
     :param end_range: int           # End of the key range to aggregate 
@@ -645,7 +657,7 @@ class Query:
         # print(f"query_columns: {query_columns}")
         count = 0
         for i in range(start_range, end_range + 1):
-            record = self.select(i, aggregate_column_index, query_columns)
+            record = self.select(i, 0, query_columns)
             if len(record) == 0: continue
             data = record[0].columns
             # print(f"data: {data}")
