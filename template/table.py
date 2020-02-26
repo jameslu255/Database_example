@@ -432,7 +432,6 @@ class Table:
 
         # Add page to lru
         self.tail_page_manager.update_page_usage(cur_pr.id_num, len(cur_pr.tail_pages) - 1)
-        # Not dirty because we didn't write to it
         self.tail_page_manager.set_page_dirty(cur_pr.id_num, len(cur_pr.tail_pages) - 1)
 
         cur_pr.num_tail_pages += 1
@@ -564,7 +563,6 @@ class Table:
         # Update LRU
         self.base_page_manager.update_page_usage(self.cur_page_range_id,
                                             len(cur_pr.base_pages) - 1)
-        # Not dirty because new page was not written to
         self.base_page_manager.set_page_dirty(self.cur_page_range_id,
                                             len(cur_pr.base_pages) - 1)
 
