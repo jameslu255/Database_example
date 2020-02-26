@@ -81,10 +81,11 @@ update_cols = [
 update_time_0 = process_time()
 for i in range(0, 515):
     # query.update(choice(keys), *(choice(update_cols)))
-    query.update(906659671 + i, *[None, 88, None])
-for i in range(0, 3):
-    # query.update(choice(keys), *(choice(update_cols)))
-    query.update(906660189, *[None, 88, None])
+    query.update(906659671 + i, *[None, 78, None])
+
+query.update(906660185, *[None, 88, None])
+query.update(906660189, *[None, 88, None])
+query.update(906660189, *[None, 98, None])
 update_time_1 = process_time()
 # # -------------------- Print Table --------------------
 for (i, y) in enumerate(grades_table.page_ranges):
@@ -138,7 +139,7 @@ for (i, y) in enumerate(grades_table.page_ranges):
         tail_page_set_end += 4 + grades_table.num_columns + 1
     print_header_line(104)
 # # ----------------------------------------------------------------------------------------------------
-print("Updating 10 records took:  \t\t\t", update_time_1 - update_time_0)
+print("Updating 520 records took:  \t\t\t", update_time_1 - update_time_0)
 print()
 
 

@@ -368,10 +368,17 @@ class Query:
 
         # might need to do this? not sure hmmm will make it super slow tho :(
         # cur_pr_copy = copy.deepcopy(cur_pr)
-        if (cur_pr.update_count >= ((4 + self.table.num_columns + 1) * 2)): # two sets of tail pages
+        # if (cur_pr.update_count >= ((4 + self.table.num_columns + 1) * 2)): # two sets of tail pages
+        #     print("merging limit reached: " + str(cur_pr.update_count) + " in " + str(pr_id))
+        #     cur_pr.update_count = 0
+        #     self.table.merge(cur_pr)
+
+        # Merge every two sets of tail pages
+        if (cur_pr.update_count > 0) and (cur_pr.num_tail_pages % 2 == 0):
+            print(f"cur_pr.num_tail_pages: {cur_pr.num_tail_pages}")    # Always printing 8 ???
             print("merging limit reached: " + str(cur_pr.update_count) + " in " + str(pr_id))
-            cur_pr.update_count = 0
             self.table.merge(cur_pr)
+
         # print("length tail page of cur pr : " + str(len(cur_pr.tail_pages)))
         # if(len(cur_pr.tail_pages) >= ((4 + self.table.num_columns + 1))*2):
             # self.table.merge(cur_pr)
