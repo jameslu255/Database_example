@@ -202,10 +202,10 @@ class Table:
                 # Lock
                 self.replace(offset, page_range.base_pages, i, value)
                 # Unlock
-    # TODO: where to put merge? in query.update?
-        # how to make it a thread?
-        # update select so that if tps < indirection look at base pages and go to tail pages otherwise
-        pass
+        # deallocate base page copy
+        base_pages_copy = None
+
+
 
 
     def has_capacity(self):
