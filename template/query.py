@@ -373,8 +373,11 @@ class Query:
         #     cur_pr.update_count = 0
         #     self.table.merge(cur_pr)
 
-        # Merge every two sets of tail pages
-        if (cur_pr.update_count > 0) and (cur_pr.num_tail_pages % 2 == 0):
+        tail_page_sets = 2     # Merge every two sets of tail pages
+        num_columns = 5 + self.table.num_columns   # number of columns in this table
+        num_total_tail_pages = tail_page_sets * num_columns     # gives us what to mod by
+
+        if (cur_pr.update_count > 0) and (cur_pr.num_tail_pages % num_total_tail_pages == 0):
             print(f"cur_pr.num_tail_pages: {cur_pr.num_tail_pages}")    # Always printing 8 ???
             print("merging limit reached: " + str(cur_pr.update_count) + " in " + str(pr_id))
             self.table.merge(cur_pr)
