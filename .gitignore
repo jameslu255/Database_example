@@ -3,6 +3,7 @@ DS_Store/
 .vscode/
 *.swp
 *.swo
+*.pyc
 venv3/
 output/
 __pycache__/
