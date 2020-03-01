@@ -74,17 +74,17 @@ class Index:
         #prints out all values from assignment 0-4
         for i in range(len(self.btree_list)):
             if (i == 0):
-                print("Students")
+                print("Dictionary")
                 for pair in (self.btree_list[i].iteritems()):
-                    print("Student ID: " + str(pair[0]) + ", RID: " + str(pair[1]))
+                    print("Key: " + str(pair[0]) + ", Value: " + str(pair[1]))
             else:
-                print("Assignment " + str(i))
+                print("Column " + str(i))
                 for pair in (self.btree_list[i].iteritems()):
-                    print("Score: " + str(pair[0]) + ", RID: " + str(pair[1]))
+                    print("Key: " + str(pair[0]) + ", Value: " + str(pair[1]))
 
     def print_tree(self, column):
         for pair in (self.btree_list[column].iteritems()):
-            print("Score: " + str(pair[0]) + ", RID: " + str(pair[1]))
+            print("Key: " + str(pair[0]) + ", Value: " + str(pair[1]))
 
     def get_value(self, column_num, key):
         return self.btree_list[column_num].get(key, "Key not found")
