@@ -1,2 +1,9 @@
+.idea/
+DS_Store/
+.vscode/
+*.swp
+*.swo
 *.pyc
-ECS165
+venv3/
+output/
+__pycache__/
