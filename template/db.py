@@ -25,7 +25,6 @@ class Database():
             self.tables.append(table_dict[key])
 
         # print("fin open!" + str(len(self.tables)))
-        pass
 
     def close(self):
         # print("close!" + str(len(self.tables)))
@@ -69,4 +68,10 @@ class Database():
     # Deletes the specified table
     """
     def drop_table(self, name):
+        pass
+
+    """
+    # Returns table with the passed name
+    """
+    def get_table(self, name):
         pass

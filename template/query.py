@@ -148,8 +148,11 @@ class Query:
 
     """
     # Read a record with specified key
+    # :param key: the key value to select records based on
+    # :param query_columns: what columns to return. array of 1 or 0 values.
     """
 
+<<<<<<< HEAD
     # add for loop to run it again multiple times with key being score and given a column number.
     def select(self, key, column, query_columns):
         #if key not in self.table.keys:
@@ -353,20 +356,6 @@ class Query:
 
             record.append(Record(rid, key, columns))
         return record
-
-    @staticmethod
-    def int_to_binary(decimal, bit_size):
-        temp = []
-        binary = []
-        for i in range(bit_size):
-            if decimal > 0:
-                temp.append(decimal % 2)
-                decimal = decimal // 2
-            else:
-                temp.append(0)
-        for i in range(bit_size-1,-1,-1):
-            binary.append(temp[i])
-        return binary
 
     def bit_is_set(self, column, schema_enc):
         mask = 1 << (NUM_CONSTANT_COLUMNS + self.table.num_columns - column - 1)
@@ -642,6 +631,7 @@ class Query:
     :param start_range: int         # Start of the key range to aggregate 
     :param end_range: int           # End of the key range to aggregate 
     :param aggregate_columns: int  # Index of desired column to aggregate
+    # this function is only called on the primary key.
     """
     def sum(self, start_range, end_range, aggregate_column_index):
         # print(f"----------------------------------- sum -----------------------------------")

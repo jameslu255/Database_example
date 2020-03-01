@@ -2,8 +2,7 @@
 from BTrees.OOBTree import OOBTree
 
 """
-# optional: Indexes the specified column of the specified table to speed up select queries
-# This data structure is usually a B-Tree
+A data strucutre holding indices for various columns of a table. Key column should be indexd by default, other columns can be indexed through this object. Indices are usually B-Trees, but other data structures can be used as well.
 """
 
 
@@ -97,6 +96,8 @@ class Index:
     def locate(self, value, column):
         #filters the btree by removing the all the values below lower_range
         return self.btree_list[column].get(value, "F");
+
+    def locate_range(self, begin, end, column):
         pass
 
     """
