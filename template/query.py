@@ -148,11 +148,8 @@ class Query:
 
     """
     # Read a record with specified key
-    # :param key: the key value to select records based on
-    # :param query_columns: what columns to return. array of 1 or 0 values.
     """
 
-<<<<<<< HEAD
     # add for loop to run it again multiple times with key being score and given a column number.
     def select(self, key, column, query_columns):
         #if key not in self.table.keys:
@@ -356,6 +353,20 @@ class Query:
 
             record.append(Record(rid, key, columns))
         return record
+
+    @staticmethod
+    def int_to_binary(decimal, bit_size):
+        temp = []
+        binary = []
+        for i in range(bit_size):
+            if decimal > 0:
+                temp.append(decimal % 2)
+                decimal = decimal // 2
+            else:
+                temp.append(0)
+        for i in range(bit_size-1,-1,-1):
+            binary.append(temp[i])
+        return binary
 
     def bit_is_set(self, column, schema_enc):
         mask = 1 << (NUM_CONSTANT_COLUMNS + self.table.num_columns - column - 1)
@@ -563,8 +574,18 @@ class Query:
                 # print(f"Appending value {columns[x]} into tail page at index {x + NUM_CONSTANT_COLUMNS}")
                 self.table.append_tail_page_record(x + NUM_CONSTANT_COLUMNS, columns[x], rid_base)
                 base_page_num = self.table.base_page_directory[rid_base][x + 5]
-                base_record_val = cur_pr.base_pages[base_page_num].get_record_int(rid_offset)
-                self.table.index.update_btree(x, base_record_val, rid_base, columns[x])  # james added this
+                page = cur_pr.base_pages[base_page_num]
+                if page == None:
+                    # if no space for new page
+                    self.table.check_need_evict()
+                    # Fetch page from disk
+                    page = self.table.base_page_manager.fetch(cur_pr.id_num, page_index)
+                    self.table.page_ranges[pr_id].base_pages[page_index] = page
+                    self.table.size += 1
+
+                base_record_val = page.get_record_int(rid_offset)
+                if (x != 0):
+                    self.table.index.update_btree(x, base_record_val, rid_base, columns[x])  # james added this
         ### ------------------------------------------------------------------------------------------ ###
 
         # Add the indices to the tail page directory
@@ -631,7 +652,6 @@ class Query:
     :param start_range: int         # Start of the key range to aggregate 
     :param end_range: int           # End of the key range to aggregate 
     :param aggregate_columns: int  # Index of desired column to aggregate
-    # this function is only called on the primary key.
     """
     def sum(self, start_range, end_range, aggregate_column_index):
         # print(f"----------------------------------- sum -----------------------------------")
