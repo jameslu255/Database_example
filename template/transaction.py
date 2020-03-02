@@ -1,13 +1,18 @@
 from template.table import Table, Record
 from template.index import Index
+from template.logger import Logger
 
 class Transaction:
 
     """
     # Creates a transaction object.
     """
-    def __init__(self):
+    def __init__(self, id):
         self.queries = []
+        
+        self.id = id
+        
+        self.logger = Logger("log")
         pass
 
     """
@@ -21,6 +26,7 @@ class Transaction:
         # to run the query:
         # query.method(*args)
         self.queries.append((query, args))
+        print("add query", query, args)
 
     def run(self):
         for query, args in self.queries:

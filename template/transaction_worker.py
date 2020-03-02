@@ -7,8 +7,12 @@ class TransactionWorker:
     """
     # Creates a transaction worker object.
     """
-    def __init__(self):
+    def __init__(self, transactions):
         self.transactions = []
+        
+        for txns in transactions:
+            self.transactions.append(txns)
+            
         pass
 
     """
