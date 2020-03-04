@@ -1,12 +1,12 @@
-from lstore.db import Database
-from lstore.query import Query
-from lstore.config import init
+from template.db import Database
+from template.query import Query
+#from template.config import init
 
 from random import choice, randint, sample, seed
 from colorama import Fore, Back, Style
 
 # Student Id and 4 grades
-init()
+#init()
 db = Database()
 grades_table = db.create_table('Grades', 5, 0)
 query = Query(grades_table)
@@ -15,7 +15,7 @@ records = {}
 
 seed(3562901)
 
-for i in range(0, 1000):
+for i in range(0, 100):
     key = 92106429 + randint(0, 9000)
     while key in records:
         key = 92106429 + randint(0, 9000)
@@ -24,7 +24,7 @@ for i in range(0, 1000):
     print('inserted', records[key])
 
 for key in records:
-    record = query.select(key, [1, 1, 1, 1, 1])[0]
+    record = query.select(key, 0, [1, 1, 1, 1, 1])[0]
     error = False
     for i, column in enumerate(record.columns):
         if column != records[key][i]:
@@ -42,7 +42,7 @@ for key in records:
         original = records[key].copy()
         records[key][i] = value
         query.update(key, *updated_columns)
-        record = query.select(key, [1, 1, 1, 1, 1])[0]
+        record = query.select(key, 0, [1, 1, 1, 1, 1])[0]
         error = False
         for j, column in enumerate(record.columns):
             if column != records[key][j]:

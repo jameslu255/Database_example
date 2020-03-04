@@ -27,12 +27,10 @@ class Index:
         #print(value)
         current_list = self.btree_list[column_num].get(key, "key not found")
         current_key = key
-
-        # self.print_tree(column_num)
-        if (current_list == "key not found"):
+        #self.print_trees()
+        if (current_list == "key not found" or value not in current_list):
             found = False
-            prev_key = key
-            #print(column_num)
+            prev_key = 0
             #print("Attempting fix")
             while (found == False):
                 current_key = self.btree_list[column_num].minKey(prev_key)
@@ -42,7 +40,7 @@ class Index:
                     found = True
                     #print("Fixed!")
                 prev_key = current_key + 1
-        # print("Students that got score at " + str(current_key) + " is " + str(current_list))
+        #print("Students that got score at " + str(current_key) + " is " + str(current_list))
         if (len(current_list) == 1):
             self.btree_list[column_num].pop(current_key)
         else:
