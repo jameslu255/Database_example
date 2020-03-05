@@ -1,7 +1,7 @@
 from template.table import *
+from template.lock_manager import *
 from template.index import Index
 import time
-import threading
 
 class Query:
 
@@ -31,6 +31,10 @@ class Query:
 
 
         for base_rid in rids:
+            didAcquireLock = self.table.lock_manager.acquire(base_rid, 'W')
+            if not didAcquireLock:
+                return -1
+            
             # grab current page range 
             # pr_id = rid_base // (max_page_size / 8)
             pr_id = base_rid // (PAGE_RANGE_MAX_RECORDS + 1)
@@ -97,12 +101,18 @@ class Query:
                 # update index to find the previous page for this column
                 rid_index -= (NUM_CONSTANT_COLUMNS + self.table.num_columns)
 
+        self.table.lock_manager.release(base_rid, 'W')
+        return 0
+
 
     """
     # Insert a record with specified columns
     """
 
     def insert(self, *columns):  
+        didAcquireLock = self.table.lock_manager.acquire(self.table.base_rid + 1, 'W')
+        if not didAcquireLock:
+            return -1
         self.table.base_rid += 1
 
         page_directory_indexes = []
@@ -142,7 +152,8 @@ class Query:
             # page_directory_indexes.append(self.table.free_base_pages[x])
             page_directory_indexes.append(cur_pr.free_base_pages[x])
         self.table.base_page_directory[self.table.base_rid] = page_directory_indexes
-        pass
+        self.table.lock_manager.release(self.table.base_rid, 'W')
+        return 0
 
 
 
@@ -163,6 +174,9 @@ class Query:
         for rid in rids:
             if (rid == "F"):
                 return []
+            didAcquireLock = self.table.lock_manager.acquire(rid, 'R')
+            if not didAcquireLock:
+                return -1
             # Find Page Range ID
             pr_id = rid // (PAGE_RANGE_MAX_RECORDS + 1)
             page_range = self.table.page_ranges[pr_id]
@@ -352,6 +366,7 @@ class Query:
                     columns.append(tail_data)
 
             record.append(Record(rid, key, columns))
+            self.table.lock_manager.release(rid, 'R')
         return record
 
     @staticmethod
@@ -378,6 +393,9 @@ class Query:
     # Update a record with specified key and columns
     """
     def update(self, key, *columns):
+        didAcquireLock = self.table.lock_manager.acquire(self.table.tail_rid + 1, 'W')
+        if not didAcquireLock:
+            return -1
         self.table.tail_rid += 1
         
         # Tail record default values
@@ -642,6 +660,8 @@ class Query:
         if (cur_pr.update_count > 0) and (cur_pr.num_tail_pages % num_total_tail_pages == 0):
             self.table.merge(cur_pr)
 
+        self.table.lock_manager.release(self.table.tail_rid, 'W')
+        return 0
         # print("length tail page of cur pr : " + str(len(cur_pr.tail_pages)))
         # if(len(cur_pr.tail_pages) >= ((4 + self.table.num_columns + 1))*2):
             # self.table.merge(cur_pr)

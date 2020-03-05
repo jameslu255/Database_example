@@ -3,6 +3,7 @@ from template.page_range import *
 from template.index import *
 from template.bp_manager import *
 from template.counter import *
+from template.lock_manager import *
 import copy
 
 from time import time
@@ -90,6 +91,9 @@ class Table:
                                                     "base_pages.bin")
         self.tail_page_manager = BufferPoolManager(self.num_columns + 5,
                                                     "tail_pages.bin")
+
+        # LockManager
+        self.lock_manager = LockManager()
 
         # will increment each time we create a new page range (acts as unique ID used to differentiate PR's)
         # also will tell us index of current pr in the pr array
