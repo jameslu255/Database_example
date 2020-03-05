@@ -1,7 +1,8 @@
 from template.page import *
 from template.page_range import *
 from template.index import *
-from template.manager import *
+from template.bp_manager import *
+from template.counter import *
 import copy
 
 from time import time
@@ -82,7 +83,7 @@ class Table:
         # Aim for 20 * num records or else things will be too slow
         self.capacity = 20000
         # bufferpool size
-        self.size = 0
+        self.size = AtomicCounter()
 
         # BufferPoolManager
         self.base_page_manager = BufferPoolManager(self.num_columns + 5,
@@ -209,7 +210,7 @@ class Table:
 
 
     def has_capacity(self):
-        return self.size <= self.capacity
+        return self.size.value <= self.capacity
 
     def evict_tail_page(self):
         """
@@ -228,7 +229,7 @@ class Table:
             # Remove the page from the bufferpool
             self.page_ranges[evictPair[1]].tail_pages[page_num] = None
             # Decrement number of pages in the bufferpool
-            self.size -= 1
+            self.size.add(-1)
             return True
         return False
 
@@ -249,7 +250,7 @@ class Table:
             # Remove the page from the bufferpool
             self.page_ranges[evictPair[1]].base_pages[page_num] = None
             # Decrement number of pages in the bufferpool
-            self.size -= 1
+            self.size.add(-1)
             return True
         return False
 
@@ -451,7 +452,7 @@ class Table:
             # Fetch the page from disk
             cur_page = self.tail_page_manager.fetch(cur_pr.id_num, index_relative)
             self.page_ranges[pr_id].tail_pages[index_relative] = cur_page
-            self.size += 1
+            self.size.add(1)
 
         # Pin the current Page
         self.tail_page_manager.pin(cur_pr.id_num, index_relative)
@@ -461,7 +462,7 @@ class Table:
             self.check_need_evict()
             # create new page
             page = Page()
-            self.size += 1
+            self.size.add(1)
 
             # write to new page
             page.write(value)
@@ -499,7 +500,7 @@ class Table:
             cur_page = self.tail_page_manager.fetch(cur_pr.id_num,
                                                     column_index)
             self.page_ranges[pr_id].tail_pages[column_index] = cur_page
-            self.size += 1
+            self.size.add(1)
 
         # Pin the current Page
         self.tail_page_manager.pin(cur_pr.id_num, column_index)
@@ -527,7 +528,7 @@ class Table:
 
             cur_page = self.base_page_manager.fetch(cur_pr.id_num, base_page_index)
             self.page_ranges[pr_id].base_pages[base_page_index] = cur_page
-            self.size += 1
+            self.size.add(1)
 
         # Pin the page
         self.base_page_manager.pin(cur_pr.id_num, base_page_index)
@@ -555,7 +556,7 @@ class Table:
         # print("creating new page for " + str(col_name))
         # create the page and push to array holding pages
         new_page = Page()
-        self.size += 1
+        self.size.add(1)
         # also add page to the list of base pages in pr
         cur_pr = self.page_ranges[self.cur_page_range_id]
         cur_pr.base_pages.append(new_page)
@@ -594,7 +595,7 @@ class Table:
             # Fetch the page
             cur_page = self.base_page_manager.fetch(pr.id_num, index_relative)
             self.page_ranges[pr_id].base_pages[index_relative] = cur_page
-            self.size += 1
+            self.size.add(1)
 
         # Pin the page
         self.base_page_manager.pin(pr.id_num, index_relative)
@@ -617,7 +618,7 @@ class Table:
             self.base_page_manager.set_page_dirty(pr.id_num, len(pr.base_pages) - 1)
             # increment the num pages count in either case (full or not full since we are adding a new page)
             pr.num_base_pages += 1
-            self.size += 1
+            self.size.add(1)
 
         # Page is dirty
         self.base_page_manager.set_page_dirty(pr.id_num, index_relative)
