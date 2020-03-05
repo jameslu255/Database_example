@@ -427,7 +427,7 @@ class Query:
             # update tail page directory
             self.table.tail_page_directory[rid] = tail_page_directory
             
-            cur_pr.update_count += (5 + self.table.num_columns)
+            cur_pr.update_count.add(5 + self.table.num_columns)
         # Already initialized tail pages
         else:
             # check if a tail record was created for this key in this page 
@@ -523,7 +523,7 @@ class Query:
                     # set map of RID -> tail page indexes
                     self.table.tail_page_directory[rid] = tail_page_directory
                     # Update number of updates for current page range
-                    cur_pr.update_count += (5 + self.table.num_columns)
+                    cur_pr.update_count.add(5 + self.table.num_columns)
 
             
         # find schema encoding of the new tail record
@@ -639,7 +639,7 @@ class Query:
         num_columns = 5 + self.table.num_columns   # number of columns in this table
         num_total_tail_pages = tail_page_sets * num_columns     # gives us what to mod by
 
-        if (cur_pr.update_count > 0) and (cur_pr.num_tail_pages % num_total_tail_pages == 0):
+        if (cur_pr.update_count.value > 0) and (cur_pr.num_tail_pages % num_total_tail_pages == 0):
             self.table.merge(cur_pr)
 
         # print("length tail page of cur pr : " + str(len(cur_pr.tail_pages)))
