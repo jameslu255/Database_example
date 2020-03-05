@@ -1,4 +1,5 @@
 from template.config import *
+from template.counter import *
 
 
 class PageRange:
@@ -12,7 +13,7 @@ class PageRange:
         self.free_base_pages = []
         self.free_tail_pages = []
 
-        self.update_count = 0       # Track number of updates a page range has had (for merge purposes)
+        self.update_count = AtomicCounter()   # Track number of updates a page range has had (for merge purposes)
 
     # check if our page range still has space to add more pages
     def page_range_has_capacity(self):

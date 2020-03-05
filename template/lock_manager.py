@@ -1,3 +1,4 @@
+from template.config import *
 from template.counter import *
 
 class LockManager:
@@ -13,7 +14,7 @@ class LockManager:
 
     def acquire(self, rid, mode):
         # Cannot acquire lock
-        if rid in self.exclusive_locks and exclusive_locks[rid].value > 0:
+        if rid in self.exclusive_locks and self.exclusive_locks[rid].value > 0:
             return False
         if mode == 'R':
             self._update(self.shared_locks, rid, mode, 1)

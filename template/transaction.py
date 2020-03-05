@@ -34,6 +34,8 @@ class Transaction:
         pass
 
     def abort(self):
+        # look at logger, get transaction id (thread id), get information associated from that transaction
+        # (rid)
         pass
 
     def commit(self):
