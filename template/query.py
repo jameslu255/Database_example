@@ -54,7 +54,7 @@ class Query:
                 # Fetch page from disk
                 indirection_page = self.table.base_page_manager.fetch(cur_pr.id_num, indirection_index)
                 cur_pr.base_pages[indirection_index] = indirection_page
-                self.table.size += 1
+                self.table.size.add(1)
 
             # Pin the current page
             self.table.base_page_manager.pin(cur_pr.id_num, indirection_index)
@@ -88,7 +88,7 @@ class Query:
                     # Fetch page from disk
                     indirection_page = self.table.tail_page_manager.fetch(cur_pr.id_num, indirection_index)
                     cur_pr.tail_pages[indirection_index] = indirection_page
-                    self.table.size += 1
+                    self.table.size.add(1)
 
 
                 indirection_value = indirection_page.get_record_int(indirection_offset)
@@ -183,7 +183,7 @@ class Query:
                 # Fetch page from disk
                 indirection_page = self.table.base_page_manager.fetch(pr_id, indirection_page_index)
                 self.table.page_ranges[pr_id].base_pages[indirection_page_index] = indirection_page
-                self.table.size += 1
+                self.table.size.add(1)
 
             # Pin the page
             self.table.base_page_manager.pin(pr_id, indirection_page_index)
@@ -206,7 +206,7 @@ class Query:
                 # Fetch page from disk
                 schema_page = self.table.base_page_manager.fetch(pr_id, schema_page_index)
                 self.table.page_ranges[pr_id].base_pages[schema_page_index] = schema_page
-                self.table.size += 1
+                self.table.size.add(1)
 
             schema_data_int = schema_page.get_record_int(offset)
 
@@ -225,7 +225,7 @@ class Query:
                 # Fetch page from disk
                 tps_page = self.table.base_page_manager.fetch(pr_id, tps_page_index)
                 self.table.page_ranges[pr_id].base_pages[tps_page_index] = tps_page
-                self.table.size += 1
+                self.table.size.add(1)
 
             tps_data = tps_page.get_record_int(offset)
 
@@ -251,7 +251,7 @@ class Query:
                         base_page = self.table.base_page_manager.fetch(pr_id,
                                                                         base_page_index)
                         self.table.page_ranges[pr_id].base_pages[base_page_index] = base_page
-                        self.table.size += 1
+                        self.table.size.add(1)
 
                     # Pin the page
                     self.table.base_page_manager.pin(pr_id, base_page_index)
@@ -283,7 +283,7 @@ class Query:
                         tail_page = self.table.tail_page_manager.fetch(pr_id,
                                                                         tail_page_index)
                         self.table.page_ranges[pr_id].tail_pages[tail_page_index] = tail_page
-                        self.table.size += 1
+                        self.table.size.add(1)
 
                     # print("tail_page size", tail_page.num_records, "offset", tail_page_offset)
                     # Pin the page
@@ -314,7 +314,7 @@ class Query:
                                 indirection_page = self.table.tail_page_manager.fetch(pr_id,
                                                                                         indirection_index)
                                 self.table.page_ranges[pr_id].tail_pages[indirection_index] = indirection_page
-                                self.table.size += 1
+                                self.table.size.add(1)
 
                             # Pin the page
                             self.table.tail_page_manager.pin(pr_id, indirection_index)
@@ -339,7 +339,7 @@ class Query:
                                 tail_page = self.table.tail_page_manager.fetch(pr_id,
                                                                                 correct_tail_page[0])
                                 self.table.page_ranges[pr_id].tail_pages[correct_tail_page[0]] = tail_page
-                                self.table.size += 1
+                                self.table.size.add(1)
 
 
                             tail_data = tail_page.get_record_int(correct_tail_page[1])
@@ -418,7 +418,7 @@ class Query:
                     # Fetch page from disk
                     page = self.table.tail_page_manager.fetch(cur_pr.id_num, page_index)
                     self.table.page_ranges[pr_id].tail_pages[page_index] = page
-                    self.table.size += 1
+                    self.table.size.add(1)
                 tail_page_directory.append((page_index, page.num_records))
                 # Unpin the page
                 self.table.tail_page_manager.unpin(cur_pr.id_num, page_index)
@@ -447,7 +447,7 @@ class Query:
                 indirection_base_page = self.table.base_page_manager.fetch(cur_pr.id_num,
                                                                             indirection_base_index)
                 self.table.page_ranges[pr_id].base_pages[indirection_base_index] = indirection_base_page
-                self.table.size += 1
+                self.table.size.add(1)
 
             # Pin the page
             self.table.base_page_manager.pin(cur_pr.id_num, indirection_base_index)
@@ -477,7 +477,7 @@ class Query:
                                                                 schema_tail_page_index)
 
                     self.table.page_ranges[pr_id].tail_pages[schema_tail_page_index] = schema_tail_page
-                    self.table.size += 1
+                    self.table.size.add(1)
 
                 # Pin the page
                 self.table.tail_page_manager.pin(cur_pr.id_num, schema_tail_page_index)
@@ -510,7 +510,7 @@ class Query:
                             # Fetch page from disk
                             page = self.table.tail_page_manager.fetch(cur_pr.id_num, page_index)
                             self.table.page_ranges[pr_id].tail_pages[page_index] = page
-                            self.table.size += 1
+                            self.table.size.add(1)
 
                         # Pin the page
                         self.table.tail_page_manager.pin(cur_pr.id_num, page_index)
@@ -540,7 +540,7 @@ class Query:
                 # Fetch page from disk
                 base_page = self.table.base_page_manager.fetch(cur_pr.id_num, base_page_index)
                 self.table.page_ranges[pr_id].base_pages[base_page_index] = base_page
-                self.table.size += 1
+                self.table.size.add(1)
 
             # pin the page
             self.table.base_page_manager.pin(cur_pr.id_num, base_page_index)
@@ -581,7 +581,7 @@ class Query:
                     # Fetch page from disk
                     page = self.table.base_page_manager.fetch(cur_pr.id_num, page_index)
                     self.table.page_ranges[pr_id].base_pages[page_index] = page
-                    self.table.size += 1
+                    self.table.size.add(1)
 
                 base_record_val = page.get_record_int(rid_offset)
                 if (x != 0):
@@ -601,7 +601,7 @@ class Query:
                 # Fetch page from disk
                 page = self.table.tail_page_manager.fetch(cur_pr.id_num, page_index)
                 self.table.page_ranges[pr_id].tail_pages[page_index] = page
-                self.table.size += 1
+                self.table.size.add(1)
 
             # pin the page
             self.table.tail_page_manager.pin(cur_pr.id_num, page_index)
@@ -624,7 +624,7 @@ class Query:
             # Fetch page from disk
             schema_base_page = self.table.base_page_manager.fetch(cur_pr.id_num, schema_enc_base_page_idx)
             self.table.page_ranges[pr_id].base_pages[schema_enc_base_page_idx] = schema_base_page
-            self.table.size += 1
+            self.table.size.add(1)
 
         self.table.base_page_manager.pin(cur_pr.id_num, schema_enc_base_page_idx)
         last_base_schema_enc = schema_base_page.get_record_int(rid_offset)

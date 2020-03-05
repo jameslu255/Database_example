@@ -41,6 +41,8 @@ class BufferPoolManager:
         self.filename = filename
         # Number of columns including the reserved columns
         self.num_columns = num_columns
+        # Used to set dirty pages
+        self._lock = threading.Lock()
 
     def set_page_dirty(self, pr_id, page_num):
         # Transform the page number to increase with the page range
