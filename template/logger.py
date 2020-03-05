@@ -1,3 +1,5 @@
+import os
+
 LOG_LEVEL = 0
 
 """
@@ -5,6 +7,7 @@ LOG_LEVEL = 0
 """
 """
     NOTES
+    -  the DBMS maintains a log in which every write is recorded.
     - if Tj reads an object last written by Ti, Tj must
     be aborted as well!
     - all active Xacts at the time of the crash are aborted when the
@@ -19,14 +22,35 @@ class Logger:
         # create the file if it DNE, empty it if it does
         open(file_name, 'a+').close()
         
-        self.num_transactions = 0  
+        self.num_transactions = 0
+        
+        # grab the number of transactions in logger rn, else init
+        if os.stat(self.file_name).st_size > 0: #file not empty
+            # grab the first line of the file -> number of transactions
+            with open(self.file_name,'r') as f:
+                first_line = f.readline().strip()
+                self.num_transactions = int(first_line)
+        else: # file is empty, set zero for first line
+            with open(self.file_name,'a') as f:
+                f.write("0\n")
+          
         
     # write the transaction into the file
-    def write(self, tid, command, old_val, new_val):
+    def write(self, tid, command, old_val, new_val, bid):
         with open(self.file_name, 'a') as f:
-            transaction = str(tid) + " " + str(command) + " " + str(old_val) + " " + str(new_val) + "\n"
+            transaction = str(tid) + " " + str(command) + " " + str(old_val) + " " + str(new_val) + str(bid) + "\n"
             self.num_transactions += 1
             f.write(transaction)
+            
+    def commit(self, tid):
+        with open(self.file_name, 'a') as f:
+            s = str(tid) + " " + "commited"
+            f.write(s)
+            
+    def abort(self, tid):
+        with open(self.file_name, 'a') as f:
+            s = str(tid) + " " + "aborted"
+            f.write(s)
             
     # read all the transactions from the newest to oldest
     def read(self):
