@@ -80,7 +80,7 @@ class Table:
         self.tail_rid = 0
 
         # Aim for 20 * num records or else things will be too slow
-        self.capacity = 20000
+        self.capacity = 200000
         # bufferpool size
         self.size = 0
 
@@ -179,10 +179,10 @@ class Table:
                     # print(f"Data from select for RID {i}: {columns}")
 
                     # Update TPS and New Values
-                    self.replace(offset, base_pages_copy, TPS_COLUMN, new_tps)
+                    self.replace(page_range.id_num, offset, base_pages_copy, TPS_COLUMN, new_tps)
                     column_index = KEY_COLUMN     # index of the column that we are merging
                     for value in columns:
-                        self.replace(offset, base_pages_copy, column_index, value)
+                        self.replace(page_range.id_num, offset, base_pages_copy, column_index, value)
                         column_index += 1
 
         # Update real base pages
@@ -200,7 +200,7 @@ class Table:
 
                 value = base_pages_copy[i].get_record_int(offset)
                 # Lock
-                self.replace(offset, page_range.base_pages, i, value)
+                self.replace(page_range.id_num, offset, page_range.base_pages, i, value)
                 # Unlock
         # deallocate base page copy
         base_pages_copy = None
@@ -260,8 +260,12 @@ class Table:
         b = self.evict_tail_page()
         assert(a or b), "Cannot evict anything"
     # call example: self.replace(i, base_pages_copy, TPS_COLUMN, new_tps)
-    def replace(self, rid, base_pages, column_index, value):
+    def replace(self, pr_id, rid, base_pages, column_index, value):
         base_page = base_pages[column_index]
+        if base_page == None:
+            # Fetch the page from disk
+            base_page = self.base_page_manager.fetch(pr_id, INDIRECTION_COLUMN)
+            base_pages[column_index] = base_page
         base_page.set_record(rid, value)
 
 
@@ -354,6 +358,7 @@ class Table:
                         tp_dir = self.tail_page_directory[indirection_value]
                         indirection_index = tp_dir[INDIRECTION_COLUMN][0]
                         indirection_offset = tp_dir[INDIRECTION_COLUMN][1]
+                        assert(indirection_index < len(page_range.tail_pages)), f"indirection_index: {indirection_index}, len: {len(page_range.tail_pages)}"
                         indirection_page = page_range.tail_pages[indirection_index]
                         if indirection_page == None:
                             # Fetch the page from disk
@@ -363,13 +368,14 @@ class Table:
                         indirection_value = indirection_page.get_record_int(indirection_offset)
 
                         # Break if we reached last merge
-                        if indirection_value == stop_TID:
+                        if indirection_value == stop_TID or indirection_value == 0:
                             break
                         column_tuple = self.tail_page_directory[indirection_value][column_index]
                         offset_exists = column_tuple[1]
 
                     if (offset_exists != 0):  # there exists something in this page
                         correct_tail_page = self.tail_page_directory[indirection_value][column_index]
+                        assert(correct_tail_page[0] < len(page_range.tail_pages)), f"tail_index: {correct_tail_page[0]}, len: {len(page_range.tail_pages)}"
                         tail_page = page_range.tail_pages[correct_tail_page[0]]
                         if tail_page == None:
                             # Fetch the page from disk
@@ -450,7 +456,7 @@ class Table:
 
             # Fetch the page from disk
             cur_page = self.tail_page_manager.fetch(cur_pr.id_num, index_relative)
-            self.page_ranges[pr_id].tail_pages[index_relative] = cur_page
+            self.page_ranges[cur_pr.id_num].tail_pages[index_relative] = cur_page
             self.size += 1
 
         # Pin the current Page

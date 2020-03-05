@@ -1,10 +1,10 @@
-from lstore.db import Database
-from lstore.query import Query
+from template.db import Database
+from template.query import Query
 
 from random import choice, randint, sample, seed
 
 db = Database()
-db.open('~/ECS165')
+db.open('ECS165')
 # Student Id and 4 grades
 grades_table = db.create_table('Grades', 5, 0)
 query = Query(grades_table)

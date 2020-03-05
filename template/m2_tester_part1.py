@@ -1,10 +1,10 @@
-from lstore.db import Database
-from lstore.query import Query
+from template.db import Database
+from template.query import Query
 
 from random import choice, randint, sample, seed
 
 db = Database()
-db.open('~/ECS165')
+db.open('ECS165')
 # Student Id and 4 grades
 grades_table = db.create_table('Grades', 5, 0)
 query = Query(grades_table)
@@ -18,12 +18,12 @@ for i in range(0, 1000):
 keys = sorted(list(records.keys()))
 print("Insert finished")
 
-table.index.create_index(1)
-table.index.create_index(2)
-table.index.create_index(3)
-table.index.create_index(4)
+grades_table.index.create_index(1)
+grades_table.index.create_index(2)
+grades_table.index.create_index(3)
+grades_table.index.create_index(4)
 
-for c in range(self.num_columns):
+for c in range(grades_table.num_columns):
     _keys = list(set(record[c] for record in records))
     index = {v: [record for record in records if record[c] == v] for v in _keys}
     for key in _keys:
@@ -37,7 +37,7 @@ for c in range(self.num_columns):
                     error = True
                     break
         if error:
-            print('select error on', key, ', column', c ':', results, ', correct:', index[key])
+            print('select error on', key, ', column', c, ':', results, ', correct:', index[key])
 print("Select finished")
 
 for _ in range(10):
