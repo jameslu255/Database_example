@@ -14,7 +14,7 @@ class LockManager:
     def acquire(self, rid, mode):
         # Cannot acquire lock
         if rid in self.exclusive_locks and exclusive_locks[rid].value > 0:
-            return false
+            return False
         if mode == 'R':
             self._update(self.shared_locks, rid, mode, 1)
         elif mode == 'W':
