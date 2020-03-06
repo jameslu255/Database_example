@@ -19,6 +19,9 @@ class Query:
     # Read a record with specified RID
     """
     def delete(self, key):
+        # grab the old value for recovery purposes
+        old_val = select(key, 0, [1] * (self.table.num_columns - 1))
+        
         # get base rid
         #base_rid = self.table.keys[key]
         rids = self.table.index.get_value(0, key)
@@ -61,7 +64,7 @@ class Query:
             indirection_value = indirection_page.get_record_int(offset)
             
             if indirection_value == 0:
-                return
+                return old_val # return the old value for recovery purposes
             
             # Unpin the current page
             self.table.base_page_manager.unpin(cur_pr.id_num, indirection_index)
@@ -96,6 +99,7 @@ class Query:
                 self.table.tail_page_manager.update_page_usage(cur_pr.id_num, indirection_index)
                 # update index to find the previous page for this column
                 rid_index -= (NUM_CONSTANT_COLUMNS + self.table.num_columns)
+        return old_val # return old values for recovery purposes
 
 
     """
@@ -142,6 +146,10 @@ class Query:
             # page_directory_indexes.append(self.table.free_base_pages[x])
             page_directory_indexes.append(cur_pr.free_base_pages[x])
         self.table.base_page_directory[self.table.base_rid] = page_directory_indexes
+        
+        # for recovery purposes
+        return [0] * (self.table.num_columns - 1)
+        
         pass
 
 
@@ -380,6 +388,9 @@ class Query:
     def update(self, key, *columns):
         self.table.tail_rid += 1
         
+        # grab the old value for recovery purposes
+        old_val = select(key, 0, [1] * self.table.num_columns)
+        
         # Tail record default values
         indirection = 0
         rid = self.table.tail_rid           # rid of current tail page
@@ -574,18 +585,8 @@ class Query:
                 # print(f"Appending value {columns[x]} into tail page at index {x + NUM_CONSTANT_COLUMNS}")
                 self.table.append_tail_page_record(x + NUM_CONSTANT_COLUMNS, columns[x], rid_base)
                 base_page_num = self.table.base_page_directory[rid_base][x + 5]
-                page = cur_pr.base_pages[base_page_num]
-                if page == None:
-                    # if no space for new page
-                    self.table.check_need_evict()
-                    # Fetch page from disk
-                    page = self.table.base_page_manager.fetch(cur_pr.id_num, page_index)
-                    self.table.page_ranges[pr_id].base_pages[page_index] = page
-                    self.table.size += 1
-
-                base_record_val = page.get_record_int(rid_offset)
-                if (x != 0):
-                    self.table.index.update_btree(x, base_record_val, rid_base, columns[x])  # james added this
+                base_record_val = cur_pr.base_pages[base_page_num].get_record_int(rid_offset)
+                self.table.index.update_btree(x, base_record_val, rid_base, columns[x])  # james added this
         ### ------------------------------------------------------------------------------------------ ###
 
         # Add the indices to the tail page directory
@@ -642,9 +643,8 @@ class Query:
         if (cur_pr.update_count > 0) and (cur_pr.num_tail_pages % num_total_tail_pages == 0):
             self.table.merge(cur_pr)
 
-        # print("length tail page of cur pr : " + str(len(cur_pr.tail_pages)))
-        # if(len(cur_pr.tail_pages) >= ((4 + self.table.num_columns + 1))*2):
-            # self.table.merge(cur_pr)
+        # return old val for transaction
+        return old_val
 
 
 

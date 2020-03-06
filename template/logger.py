@@ -38,18 +38,18 @@ class Logger:
     # write the transaction into the file
     def write(self, tid, command, old_val, new_val, bid):
         with open(self.file_name, 'a') as f:
-            transaction = str(tid) + " " + str(command) + " " + str(old_val) + " " + str(new_val) + str(bid) + "\n"
+            transaction = str(tid) + " " + str(command) + " " + str(old_val) + " " + str(new_val) + " " + str(bid) + "\n"
             self.num_transactions += 1
             f.write(transaction)
             
     def commit(self, tid):
         with open(self.file_name, 'a') as f:
-            s = str(tid) + " " + "commited"
+            s = str(tid) + " " + "commited\n"
             f.write(s)
             
     def abort(self, tid):
         with open(self.file_name, 'a') as f:
-            s = str(tid) + " " + "aborted"
+            s = str(tid) + " " + "aborted\n"
             f.write(s)
             
     # read all the transactions from the newest to oldest
