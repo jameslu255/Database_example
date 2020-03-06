@@ -37,7 +37,7 @@ class Transaction:
                 print("query update")
                 # error = query(*args)
             elif query_type == "insert": # Query.insert
-                print("query insert"):
+                print("query insert")
                 # error = query(*args)
             elif query_type == "select": # Query.select
                 print("query select")
@@ -61,8 +61,15 @@ class Transaction:
         self.logger.abort(self.id)
         # undo all the queries of this transaction
         q = self.logger.read_tid(self.id) # queries that happened already before the abort
-        
-        
+        # q = [ transaction id, what transactions occurred (could be 1+), [old val], [new val], base RID ]
+        # q = ["1 update [0,0,0] [10,20,30] 512", "1 insert [0,0,0] [1,2,3] 513", ...]
+        # id (int)
+        # string 'update' or 'insert' or 'delete'
+        # Undo the stuff that occurred
+        # Step 1: clear queries
+        self.queries = []
+        # Step 2: read the logger to know what to undo
+
         pass
 
     def commit(self):
@@ -70,3 +77,25 @@ class Transaction:
         self.logger.commit(self.id)
         pass
 
+    def parse_log_read(self, read):
+        # ["tid", "query", "[old values]", "[new values]", "RID"]
+        read_array = read.split()   # ["1", "update", "[0,0,0]", "[0,0,0]", "RID"]
+        tid = int(read_array[0])
+        query = read_array[1]
+        old_values = read_array[2]  # TODO: string to array
+        new_values = read_array[3]  # TODO: string to array
+        base_RID = int(read_array[4])
+        pass
+
+    #TODO: undo queries
+    def undo_update(self):
+
+        pass
+
+    def undo_insert(self):
+        # delete
+        pass
+
+    def undo_delete(self):
+        # insert
+        pass
