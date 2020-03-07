@@ -83,6 +83,7 @@ class Transaction:
         self.logger.commit(self.id)
         pass
 
+    # we want the log to be in this format instead: 1 insert 0,0,0,0 2,3,4,5 1
     def parse_log_read(self, read):
         # ["tid", "query", "[old values]", "[new values]", "RID"]
         read_array = read.split()   # ["1", "update", "[0,0,0]", "[0,0,0]", "RID"]
