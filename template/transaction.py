@@ -97,7 +97,8 @@ class Transaction:
         values = []
         parsed_string = re.split(r'\W+', string)
         for i in range(len(parsed_string)):
-            values.append(parsed_string[i])
+            value = int(parsed_string[i])
+            values.append(value)
         return values
         pass
 
