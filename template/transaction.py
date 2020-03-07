@@ -65,27 +65,18 @@ class Transaction:
         # write 'tid aborted'
         self.logger.abort(self.id)
         # undo all the queries of this transaction
-        q = self.logger.read_tid(self.id) # queries that happened already before the abort
-        # q = [ transaction id, what transactions occurred (could be 1+), [old val], [new val], base RID ]
-        # q = ["1 update [0,0,0] [10,20,30] 512", "1 insert [0,0,0] [1,2,3] 513", ...]
+        line_read = self.logger.read_tid(self.id) # queries that happened already before the abort
+        # line_read = [ transaction id, what transactions occurred (could be 1+), [old val], [new val], base RID ]
+        # line_read = ["1 update [0,0,0] [10,20,30] 512", "1 insert [0,0,0] [1,2,3] 513", ...]
         # id (int)
         # string 'update' or 'insert' or 'delete'
+
         # Undo the stuff that occurred
         # Step 1: clear queries
         self.queries = []
         # Step 2: read the logger to know what to undo
-
-        pass
-
-    def commit(self):
-        # write 'tid commited'
-        self.logger.commit(self.id)
-        pass
-
-    # we want the log to be in this format instead: 1 insert 0,0,0,0 2,3,4,5 1
-    def parse_log_read(self, read):
-        # ["tid", "query", "[old values]", "[new values]", "RID"]
-        read_array = read.split()   # ["1", "update", "[0,0,0]", "[0,0,0]", "RID"]
+        # we want the log to be in this format instead: 1 insert 0,0,0,0 2,3,4,5 1
+        read_array = line_read.split()  # ["1", "update", "[0,0,0]", "[0,0,0]", "RID"]
         tid = int(read_array[0])
         query = read_array[1]
         old_values = self.parse_string_array(read_array[2])
@@ -93,8 +84,13 @@ class Transaction:
         base_RID = int(read_array[4])
         pass
 
+    def commit(self):
+        # write 'tid commited'
+        self.logger.commit(self.id)
+        pass
+
     @staticmethod
-    def parse_string_array(self, string):
+    def parse_string_array(string):
         values = []
         parsed_string = string.split(',')
         for i in range(len(parsed_string)):
