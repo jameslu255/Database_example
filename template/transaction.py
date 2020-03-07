@@ -1,7 +1,6 @@
 from template.table import Table, Record
 from template.index import Index
 from template.logger import Logger
-import re
 
 class Transaction:
 
@@ -95,7 +94,7 @@ class Transaction:
 
     def parse_string_array(self, string):
         values = []
-        parsed_string = re.split(r'\W+', string)
+        parsed_string = string.split(',')
         for i in range(len(parsed_string)):
             value = int(parsed_string[i])
             values.append(value)
