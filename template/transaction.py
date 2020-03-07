@@ -87,11 +87,12 @@ class Transaction:
         read_array = read.split()   # ["1", "update", "[0,0,0]", "[0,0,0]", "RID"]
         tid = int(read_array[0])
         query = read_array[1]
-        old_values = self.parse_string_array(read_array[2])  # TODO: string to array
-        new_values = self.parse_string_array(read_array[2])  # TODO: string to array
+        old_values = self.parse_string_array(read_array[2])
+        new_values = self.parse_string_array(read_array[2])
         base_RID = int(read_array[4])
         pass
 
+    @staticmethod
     def parse_string_array(self, string):
         values = []
         parsed_string = string.split(',')
