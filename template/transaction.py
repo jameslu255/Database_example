@@ -1,6 +1,7 @@
 from template.table import Table, Record
 from template.index import Index
 from template.logger import Logger
+import re
 
 class Transaction:
 
@@ -82,9 +83,17 @@ class Transaction:
         read_array = read.split()   # ["1", "update", "[0,0,0]", "[0,0,0]", "RID"]
         tid = int(read_array[0])
         query = read_array[1]
-        old_values = read_array[2]  # TODO: string to array
-        new_values = read_array[3]  # TODO: string to array
+        old_values = parse_string_array(read_array[2])  # TODO: string to array
+        new_values = parse_string_array(read_array[2])  # TODO: string to array
         base_RID = int(read_array[4])
+        pass
+
+    def parse_string_array(self, string):
+        values = []
+        parsed_string = re.split(r'\W+', string)
+        for i in range(len(parsed_string)):
+            values.append(parsed_string[i])
+        return values
         pass
 
     #TODO: undo queries
@@ -99,3 +108,7 @@ class Transaction:
     def undo_delete(self):
         # insert
         pass
+
+    # [
+    #
+    # "0, 0, 0]"
