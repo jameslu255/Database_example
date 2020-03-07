@@ -36,13 +36,18 @@ class Transaction:
             # check if query runs successfully
             if query_type == "update": # Query.update
                 print("query update")
-                # error = query(*args)
+                error = query(*args)
             elif query_type == "insert": # Query.insert
                 print("query insert")
-                # error = query(*args)
+                error = query(*args)
             elif query_type == "select": # Query.select
                 print("query select")
                 # check to see if Tj reads an object last written by Ti, Tj must be aborted as well!
+            elif query_type == "delete": # Query.delete
+                print("query delete")
+                error = query(*args)
+            elif query_type == "sum":
+                print("query sum")
             else:
                 raise Exception(" unexpected query type {}".format(query_type))
                 
