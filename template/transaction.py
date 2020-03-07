@@ -50,7 +50,7 @@ class Transaction:
             else:
                 raise Exception(" unexpected query type {}".format(query_type))
                 
-            if(error == -1):
+            if error == -1:
                 print("aborting! Query failed for",query, args)
                 self.abort()
             else: # no error write to log
@@ -64,17 +64,14 @@ class Transaction:
     def abort(self):
         # write 'tid aborted'
         self.logger.abort(self.id)
-        # undo all the queries of this transaction
-        line_read = self.logger.read_tid(self.id) # queries that happened already before the abort
-        # line_read = [ transaction id, what transactions occurred (could be 1+), [old val], [new val], base RID ]
-        # line_read = ["1 update [0,0,0] [10,20,30] 512", "1 insert [0,0,0] [1,2,3] 513", ...]
-        # id (int)
-        # string 'update' or 'insert' or 'delete'
 
         # Undo the stuff that occurred
         # Step 1: clear queries
         self.queries = []
         # Step 2: read the logger to know what to undo
+        line_read = self.logger.read_tid(self.id)  # queries that happened already before the abort
+        # line_read = [ transaction id, what transactions occurred (could be 1+), [old val], [new val], base RID ]
+        # line_read = ["1 update 0,0,0 10,20,30 512", "1 insert 0,0,0 1,2,3 513", ...]
         # we want the log to be in this format instead: 1 insert 0,0,0,0 2,3,4,5 1
         read_array = line_read.split()  # ["1", "update", "[0,0,0]", "[0,0,0]", "RID"]
         tid = int(read_array[0])
@@ -82,6 +79,16 @@ class Transaction:
         old_values = self.parse_string_array(read_array[2])
         new_values = self.parse_string_array(read_array[2])
         base_RID = int(read_array[4])
+
+        if query == "update":
+            #TODO
+        elif query == "insert":
+            #TODO
+        elif query == "delete":
+            #TODO
+
+
+
         pass
 
     def commit(self):
