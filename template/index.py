@@ -93,10 +93,15 @@ class Index:
 
     def locate(self, value, column):
         #filters the btree by removing the all the values below lower_range
-        return self.btree_list[column].get(value, "F");
+        return self.btree_list[column].get(value, "F")
 
     def locate_range(self, begin, end, column):
-        pass
+        records = []
+        i = 0
+        while (begin + i < end):
+            records.append(self.btree_list[column].get(begin + i, "F"))
+            i += 1
+        return records
 
     """
     # optional: Create index on specific column
