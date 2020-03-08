@@ -34,7 +34,7 @@ class Query:
         for base_rid in rids:
             didAcquireLock = self.table.lock_manager.acquire(base_rid, 'W')
             if not didAcquireLock:
-                return -1
+                return False
             
             # grab current page range 
             # pr_id = rid_base // (max_page_size / 8)
@@ -103,7 +103,7 @@ class Query:
                 rid_index -= (NUM_CONSTANT_COLUMNS + self.table.num_columns)
 
         self.table.lock_manager.release(base_rid, 'W')
-        return 0
+        return True
 
 
     """
@@ -113,7 +113,7 @@ class Query:
     def insert(self, *columns):  
         didAcquireLock = self.table.lock_manager.acquire(self.table.base_rid + 1, 'W')
         if not didAcquireLock:
-            return -1
+            return False
         self.table.base_rid += 1
 
         page_directory_indexes = []
@@ -154,7 +154,7 @@ class Query:
             page_directory_indexes.append(cur_pr.free_base_pages[x])
         self.table.base_page_directory[self.table.base_rid] = page_directory_indexes
         self.table.lock_manager.release(self.table.base_rid, 'W')
-        return 0
+        return True
 
 
 
@@ -177,7 +177,7 @@ class Query:
                 return []
             didAcquireLock = self.table.lock_manager.acquire(rid, 'R')
             if not didAcquireLock:
-                return -1
+                return False
             # Find Page Range ID
             pr_id = rid // (PAGE_RANGE_MAX_RECORDS + 1)
             page_range = self.table.page_ranges[pr_id]
@@ -396,7 +396,7 @@ class Query:
     def update(self, key, *columns):
         didAcquireLock = self.table.lock_manager.acquire(self.table.tail_rid + 1, 'W')
         if not didAcquireLock:
-            return -1
+            return False
         self.table.tail_rid += 1
         
         # Tail record default values
@@ -662,7 +662,7 @@ class Query:
             self.table.merge(cur_pr)
 
         self.table.lock_manager.release(self.table.tail_rid, 'W')
-        return 0
+        return True
         # print("length tail page of cur pr : " + str(len(cur_pr.tail_pages)))
         # if(len(cur_pr.tail_pages) >= ((4 + self.table.num_columns + 1))*2):
             # self.table.merge(cur_pr)
