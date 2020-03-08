@@ -92,8 +92,6 @@ class Transaction:
         elif query_str == "delete":
             self.query.insert(*old_values)
 
-
-
         pass
 
     def commit(self):
@@ -109,20 +107,3 @@ class Transaction:
             value = int(parsed_string[i])
             values.append(value)
         return values
-
-    #TODO: undo queries
-    def undo_update(self):
-
-        pass
-
-    def undo_insert(self):
-        # delete
-        pass
-
-    def undo_delete(self):
-        # insert
-        pass
-
-    # [
-    #
-    # "0, 0, 0]"
