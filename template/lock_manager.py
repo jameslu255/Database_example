@@ -44,10 +44,12 @@ class LockManager:
         return True 
 
     def clear_locks(self):
+        # remove all locks for serialization
         self.shared_locks.clear()
         self.exclusive_locks.clear()
         self._lock = None
 
     def reset_lock(self):
+        # resinstantiate the lock
         if self._lock == None:
             self._lock = threading.Lock()

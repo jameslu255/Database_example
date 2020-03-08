@@ -116,13 +116,19 @@ class Table:
             self.create_base_page(x)
 
     def counters_to_int(self):
-        self.size = self.size.value
+        # if counter is an AtomicCounter, convert to int for deserialization
+        if isinstance(self.size, AtomicCounter):
+            self.size = self.size.value
+        # Convert update counts to int 
         for pr in self.page_ranges:
             pr.make_count_serializable()
 
     def reset_counters(self):
+        # if counter is an int, convert to AtomicCounter during deserialization
         if isinstance(self.size, int):
             self.size = AtomicCounter(self.size)
+
+        # Convert update counts to AtomicCounter
         for pr in self.page_ranges:
             pr.reset_counter()
 

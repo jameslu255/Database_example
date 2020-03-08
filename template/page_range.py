@@ -22,9 +22,11 @@ class PageRange:
         return (self.max_capacity - self.num_base_pages) >= 0
 
     def make_count_serializable(self):
+        # if counter is an AtomicCounter, convert to int for serialization
         if isinstance(self.update_count, AtomicCounter):
             self.update_count = self.update_count.value
 
     def reset_counter(self):
+        # if counter is an int, convert to AtomicCounter during deserialization
         if isinstance(self.update_count, int):
             self.update_count = AtomicCounter(self.update_count)

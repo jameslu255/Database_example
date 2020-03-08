@@ -23,6 +23,7 @@ class Database():
             # print("table id is " + str(key))
             # update tables array
             table = table_dict[key]
+            # Reinstantiate the locks and AtomicCounter
             table.lock_manager.reset_lock()
             table.base_page_manager.reset_lock()
             table.tail_page_manager.reset_lock()
