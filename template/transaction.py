@@ -28,6 +28,7 @@ class Transaction:
         # query.method(*args)
         self.queries.append((query, args))
 
+    # If you choose to implement this differently this method must still return True if transaction commits or False on abort
     def run(self):
         # !!!!!!!!!!!!!!!!! THIS CODE GIVEN IN THE SKELETON PROVIDED
         # for query, args in self.queries:
