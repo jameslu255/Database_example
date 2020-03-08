@@ -63,6 +63,7 @@ class Transaction:
         pass
 
     def abort(self):
+        # TODO: do roll-back and any other necessary operations
         # write 'tid aborted'
         self.logger.abort(self.id)
 
@@ -92,12 +93,16 @@ class Transaction:
         elif query_str == "delete":
             self.query.insert(*old_values)
 
-        pass
+        return False
+
 
     def commit(self):
+        # TODO: commit to database
         # write 'tid commited'
         self.logger.commit(self.id)
-        pass
+
+        return True
+
 
     @staticmethod
     def parse_string_array(string):
