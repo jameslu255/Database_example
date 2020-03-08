@@ -69,9 +69,3 @@ class Database():
     """
     def drop_table(self, name):
         pass
-
-    """
-    # Returns table with the passed name
-    """
-    def get_table(self, name):
-        pass
