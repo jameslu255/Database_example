@@ -20,3 +20,11 @@ class PageRange:
         # use 16 for now number changes depending on how many max pages we want to store
         # print("checking capacity, cur at ", self.num_base_pages)
         return (self.max_capacity - self.num_base_pages) >= 0
+
+    def make_count_serializable(self):
+        if isinstance(self.update_count, AtomicCounter):
+            self.update_count = self.update_count.value
+
+    def reset_counter(self):
+        if isinstance(self.update_count, int):
+            self.update_count = AtomicCounter(self.update_count)

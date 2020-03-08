@@ -115,6 +115,19 @@ class Table:
         for x in range(num_columns):
             self.create_base_page(x)
 
+    def counters_to_int(self):
+        self.size = self.size.value
+        for pr in self.page_ranges:
+            pr.make_count_serializable()
+
+    def reset_counters(self):
+        if isinstance(self.size, int):
+            self.size = AtomicCounter(self.size)
+        for pr in self.page_ranges:
+            pr.reset_counter()
+
+
+
     def get_page_range(self, base_rid):
         pr_id = (base_rid // (PAGE_RANGE_MAX_RECORDS + 1))  # given the base_rid we can find the page range we want
         return self.page_ranges[pr_id]
@@ -426,7 +439,7 @@ class Table:
 
         # add this tail page to the page range's tail list
         cur_pr.tail_pages.append(new_page)
-        self.size +=1
+        self.size.add(1)
 
         # keep track of index of page relative to array index
         if (len(cur_pr.free_tail_pages) < self.num_columns + 5):  # when initializing

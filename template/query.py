@@ -24,6 +24,7 @@ class Query:
         rids = self.table.index.get_value(0, key)
         record = self.select(key, 0, [1, 1, 1, 1, 1])[0]
         #print("record columns are : " + str(record.columns))
+        # TODO: Probably should lock right here
         self.table.index.remove_values(0, key, list(rids)[0])
         for i in range(len(record.columns)):
             if i != 0:

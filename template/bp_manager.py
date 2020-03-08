@@ -31,7 +31,7 @@ class BufferPoolManager:
     def __init__(self, num_columns, filename):
         # Set of pages that are dirty
         self.dirty_pages = set()
-        # Pages that are dirty
+        # Pages that are in use
         self.pinned_pages = dict()
         # Disk Page Number -> Page Range ID
         self.disk_location = dict() 
@@ -167,3 +167,11 @@ class BufferPoolManager:
         page_num = (pr_id * self.num_columns) + page_num
         if page_num in self.pinned_pages:
             self.pinned_pages[page_num].add(-1)
+
+    def clear_locks(self):
+        self._lock = None
+        self.pinned_pages.clear()
+
+    def reset_lock(self):
+        if self._lock == None:
+            self._lock = threading.Lock()
