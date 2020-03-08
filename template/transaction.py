@@ -31,45 +31,14 @@ class Transaction:
     # If you choose to implement this differently this method must still return True if transaction commits or False on abort
     def run(self):
         # !!!!!!!!!!!!!!!!! THIS CODE GIVEN IN THE SKELETON PROVIDED
-        # for query, args in self.queries:
-        #     result = query(*args)
-        #     # If the query has failed the transaction should abort
-        #     if result == False:
-        #         return self.abort()
-        # return self.commit()
-
-
         for query, args in self.queries:
-            print("run query", query, args)
-            error = -1
             query_type = str(query.__name__)
-            # check if query runs successfully
-            if query_type == "update": # Query.update
-                print("query update")
-                error = query(*args)
-            elif query_type == "insert": # Query.insert
-                print("query insert")
-                error = query(*args)
-            elif query_type == "select": # Query.select
-                print("query select")
-                # check to see if Tj reads an object last written by Ti, Tj must be aborted as well!
-            elif query_type == "delete": # Query.delete
-                print("query delete")
-                error = query(*args)
-            elif query_type == "sum":
-                print("query sum")
-            else:
-                raise Exception(" unexpected query type {}".format(query_type))
-                
-            if error == -1:
-                print("aborting! Query failed for",query, args)
-                self.abort()
-            else: # no error write to log
-                self.logger.write(self.id, query_type, error, args[1:], args[0])
-                
-        # if all queries run successfully 
-        self.commit()
-        
+            print(query_type)
+            result = query(*args)
+            # If the query has failed the transaction should abort
+            if result == False:
+                return self.abort()
+        return self.commit()
         pass
 
     def abort(self):
