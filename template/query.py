@@ -2,6 +2,7 @@ from template.table import *
 from template.index import Index
 import time
 import threading
+import re
 
 
 class Query:
@@ -690,27 +691,42 @@ class Query:
             return u
         return False
 
-    def abort(self, line):
-        # line = "tid query old_val_1,...,old_val_x new_val_1,...,new_val_x key"
-        # ex: line = "1 update 0,0,0 10,20,30 key"
-        parsed_line = line.split()  # ["1", "update", "0,0,0", "10,20,30", "key"]
-        tid = int(parsed_line[0])
-        query_str = parsed_line[1]
-        old_values = self.parse_string_array(parsed_line[2])
-        new_values = self.parse_string_array(parsed_line[2])
-        key = int(parsed_line[4])
+    def abort(self, log_lines):
+        # log_lines = ["tid query [old values] (new values) key", ...]
+        # line = "tid query [old values] (new values) key"
+        # ex: line = "1 update [0, 0, 0] (10, 20, 30) key"
+        for line in log_lines:
+            parsed_line = line.split()  # ["1", "update", "0,0,0", "10,20,30", "key"]
+            tid = int(parsed_line[0])
+            query_str = parsed_line[1]
+            old_values = self.parse_string_array(parsed_line[2])
+            new_values = self.parse_string_tuple(parsed_line[2])
+            key = int(parsed_line[4])
 
-        if query_str == "update":
-            self.update(key, *old_values)     # To undo update: update w/ old values
-        elif query_str == "insert":
-            self.delete(*key)                 # To undo insert: delete
-        elif query_str == "delete":
-            self.insert(*old_values)          # To undo delete: insert
+            if query_str == "update":
+                self.update(key, *old_values)     # To undo update: update w/ old values
+            elif query_str == "insert":
+                self.delete(*key)                 # To undo insert: delete
+            elif query_str == "delete":
+                self.insert(*old_values)          # To undo delete: insert
 
     @staticmethod
     def parse_string_array(string):
+        x = re.findall("\[(.*?)\]", string)
+        parsed_string = x[0].split(', ')
+
         values = []
-        parsed_string = string.split(',')
+        for i in range(len(parsed_string)):
+            value = int(parsed_string[i])
+            values.append(value)
+        return values
+
+    @staticmethod
+    def parse_string_tuple(string):
+        x = re.findall("\((.*?)\)", string)
+        parsed_string = x[0].split(', ')
+
+        values = []
         for i in range(len(parsed_string)):
             value = int(parsed_string[i])
             values.append(value)
