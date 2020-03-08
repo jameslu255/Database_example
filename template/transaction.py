@@ -29,6 +29,15 @@ class Transaction:
         self.queries.append((query, args))
 
     def run(self):
+        # !!!!!!!!!!!!!!!!! THIS CODE GIVEN IN THE SKELETON PROVIDED
+        # for query, args in self.queries:
+        #     result = query(*args)
+        #     # If the query has failed the transaction should abort
+        #     if result == False:
+        #         return self.abort()
+        # return self.commit()
+
+
         for query, args in self.queries:
             print("run query", query, args)
             error = -1
