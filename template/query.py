@@ -17,6 +17,8 @@ class Query:
     """
     # internal Method
     # Read a record with specified RID
+    # Returns True upon succesful deletion
+    # Return False if record doesn't exist or is locked due to 2PL
     """
     def delete(self, key):
         # grab the old value for recovery purposes
@@ -104,6 +106,8 @@ class Query:
 
     """
     # Insert a record with specified columns
+    # Return True upon succesful insertion
+    # Returns False if insert fails for whatever reason
     """
 
     def insert(self, *columns):  
@@ -156,6 +160,11 @@ class Query:
 
     """
     # Read a record with specified key
+    # :param key: the key value to select records based on
+    # :param query_columns: what columns to return. array of 1 or 0 values.
+    # Returns a list of Record objects upon success
+    # Returns False if record locked by TPL
+    # Assume that select will never be called on a key that doesn't exist
     """
 
     # add for loop to run it again multiple times with key being score and given a column number.
@@ -384,6 +393,8 @@ class Query:
 
     """
     # Update a record with specified key and columns
+    # Returns True if update is succesful
+    # Returns False if no records exist with given key or if the target record cannot be accessed due to 2PL locking
     """
     def update(self, key, *columns):
         self.table.tail_rid += 1
@@ -652,6 +663,9 @@ class Query:
     :param start_range: int         # Start of the key range to aggregate 
     :param end_range: int           # End of the key range to aggregate 
     :param aggregate_columns: int  # Index of desired column to aggregate
+    # this function is only called on the primary key.
+    # Returns the summation of the given range upon success
+    # Returns False if no record exists in the given range
     """
     def sum(self, start_range, end_range, aggregate_column_index):
         # print(f"----------------------------------- sum -----------------------------------")
@@ -674,7 +688,7 @@ class Query:
         pass
 
     """
-    incremenets one column of the record
+    increments one column of the record
     this implementation should work if your select and update queries already work
     :param key: the primary of key of the record to increment
     :param column: the column to increment
