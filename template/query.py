@@ -389,7 +389,7 @@ class Query:
         self.table.tail_rid += 1
 
         # grab the old value for recovery purposes
-        old_val = select(key, 0, [1] * self.table.num_columns)
+        old_val = self.select(key, 0, [1] * self.table.num_columns)
 
         # Tail record default values
         indirection = 0
