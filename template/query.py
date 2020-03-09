@@ -29,12 +29,13 @@ class Query:
         # get base rid
         # base_rid = self.table.keys[key]
         rids = self.table.index.get_value(0, key)
-        record = self.select(key, 0, [1, 1, 1, 1, 1])[0]
-        # print("record columns are : " + str(record.columns))
-        self.table.index.remove_values(0, key, list(rids)[0])
-        for i in range(len(record.columns)):
-            if i != 0:
-                self.table.index.remove_values(i, record.columns[i], list(rids)[0])
+
+        record = self.select(key, 0, [1, 1, 1, 1, 1])
+        if (record == []):
+            return
+        else:
+            record = record[0]
+        #print("record columns are : " + str(record.columns))
 
         for base_rid in rids:
             didAcquireLock = self.table.lock_manager.acquire(base_rid, 'W')
@@ -105,6 +106,10 @@ class Query:
                 self.table.tail_page_manager.update_page_usage(cur_pr.id_num, indirection_index)
                 # update index to find the previous page for this column
                 rid_index -= (NUM_CONSTANT_COLUMNS + self.table.num_columns)
+        self.table.index.remove_values(0, key, list(rids)[0])
+        for i in range(len(record.columns)):
+            if i != 0:
+                self.table.index.remove_values(i, record.columns[i], list(rids)[0])
 
 
         self.table.lock_manager.release(base_rid, 'W')
