@@ -18,7 +18,7 @@ class LockManager:
     def acquire(self, rid, mode):
         # Cannot acquire lock
         if rid in self.exclusive_locks and self.exclusive_locks[rid].value > 0:
-            print(f"Cannot Acquire lock, rid: {rid}")
+            # print(f"Cannot Acquire lock, rid: {rid}")
             return False
         if mode == 'R':
             # print(f"Acquiring read lock, rid: {rid}")

@@ -127,17 +127,17 @@ class Query:
     # Returns False if insert fails for whatever reason
     """
     def insert(self, *columns, txn_id = 0):  
-        didAcquireLock = self.table.lock_manager.acquire(self.table.base_rid + 1, 'W')
+        self.table.base_rid.add(1)
+        rid = self.table.base_rid.value
+        didAcquireLock = self.table.lock_manager.acquire(rid, 'W')
         if not didAcquireLock:
             return False
-        self.table.base_rid += 1
 
         page_directory_indexes = []
         # record = Record(self.table.base_rid, columns[0], columns)
         key = columns[0]
         schema_encoding = 0  # '0' * self.table.num_columns
         timestamp = int(time.time())
-        rid = self.table.base_rid
         indirection = 0  # None
 
         # Write to the page
@@ -163,14 +163,14 @@ class Query:
         cur_pr = self.table.page_ranges[pr_id]
 
         # SID -> RID
-        self.table.keys[key] = self.table.base_rid
+        self.table.keys[key] = rid 
         # RID -> page_index
         for x in range(len(columns) + NUM_CONSTANT_COLUMNS):
             # page_directory_indexes.append(self.table.free_base_pages[x])
             page_directory_indexes.append(cur_pr.free_base_pages[x])
-        self.table.base_page_directory[self.table.base_rid] = page_directory_indexes
+        self.table.base_page_directory[rid] = page_directory_indexes
 
-        self.table.lock_manager.release(self.table.base_rid, 'W')
+        self.table.lock_manager.release(rid, 'W')
         if(txn_id > 0):
             self.logger.write(txn_id, "insert", [0]*(self.table.num_columns-1), columns[1:], columns[0])
         
@@ -416,20 +416,21 @@ class Query:
     """
 
     def update(self, key, *columns, txn_id = 0):
-        didAcquireLock = self.table.lock_manager.acquire(self.table.tail_rid + 1, 'W')
+        rid_base = self.table.keys[key]  # rid of base page with key
+        didAcquireLock = self.table.lock_manager.acquire(rid_base, 'W')
         if not didAcquireLock:
             return False
-        self.table.tail_rid += 1
+
+        self.table.tail_rid.add(1)
 
         # grab the old value for recovery purposes
         old_val = self.select(key, 0, [1] * self.table.num_columns)
 
         # Tail record default values
         indirection = 0
-        rid = self.table.tail_rid  # rid of current tail page
+        rid = self.table.tail_rid.value  # rid of current tail page
         timestamp = int(time.time())
         schema_encoding = ''
-        rid_base = self.table.keys[key]  # rid of base page with key
 
         # Get current page range
         pr_id = rid_base // (PAGE_RANGE_MAX_RECORDS + 1)
@@ -686,7 +687,7 @@ class Query:
             self.table.merge(cur_pr)
 
 
-        self.table.lock_manager.release(self.table.tail_rid, 'W')
+        self.table.lock_manager.release(rid_base, 'W')
         
         if(txn_id > 0):
             self.logger.write(txn_id, "update", old_val, columns[1:], key)

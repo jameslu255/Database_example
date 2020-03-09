@@ -78,12 +78,12 @@ class Table:
         self.tail_page_directory = {}
 
         # number of records a table has
-        self.base_rid = 0
+        self.base_rid = AtomicCounter()
         # tail page id
-        self.tail_rid = 0
+        self.tail_rid = AtomicCounter()
 
         # Aim for 20 * num records or else things will be too slow
-        self.capacity = 200000
+        self.capacity = 20000
         # bufferpool size
         self.size = AtomicCounter()
 
@@ -123,6 +123,10 @@ class Table:
         # if counter is an AtomicCounter, convert to int for deserialization
         if isinstance(self.size, AtomicCounter):
             self.size = self.size.value
+        if isinstance(self.base_rid, AtomicCounter):
+            self.base_rid= self.base_rid.value
+        if isinstance(self.tail_rid, AtomicCounter):
+            self.tail_rid = self.tail_rid.value
 
         # make num_tranactions int
         self.logger.counters_to_int()
@@ -135,6 +139,10 @@ class Table:
         # if counter is an int, convert to AtomicCounter during deserialization
         if isinstance(self.size, int):
             self.size = AtomicCounter(self.size)
+        if isinstance(self.base_rid, int):
+            self.base_rid = AtomicCounter(self.base_rid)
+        if isinstance(self.tail_rid, int):
+            self.tail_rid = AtomicCounter(self.tail_rid)
 
         # restore num_tranactions
         self.logger.reset_counters()
