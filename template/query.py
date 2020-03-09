@@ -11,11 +11,11 @@ class Query:
     """
     # Creates a Query object that can perform different queries on the specified table 
     """
+    abort_sem = threading.Semaphore()
 
     def __init__(self, table):
         self.table = table
         self.logger = Logger("log")
-        self.abort_sem = threading.Semaphore()
 
     """
     # internal Method
@@ -26,7 +26,7 @@ class Query:
 
     def delete(self, key, txn_id=0, abort=False):
         if abort:
-            self.abort_sem.acquire()
+            Query.abort_sem.acquire()
 
         # grab the old value for recovery purposes
         old_val = self.select(key, 0, [1] * (self.table.num_columns - 1))
@@ -123,7 +123,7 @@ class Query:
             self.logger.write(txn_id, "delete", old_val, None, key)
 
         if abort:
-            self.abort_sem.release()
+            Query.abort_sem.release()
         return True
 
     """
@@ -134,7 +134,7 @@ class Query:
 
     def insert(self, *columns, txn_id=0, abort=False):
         if abort:
-            self.abort_sem.acquire()
+            Query.abort_sem.acquire()
 
         self.table.base_rid.add(1)
         rid = self.table.base_rid.value
@@ -185,7 +185,7 @@ class Query:
             self.logger.write(txn_id, "insert", [0] * (self.table.num_columns - 1), columns[1:], columns[0])
 
         if abort:
-            self.abort_sem.release()
+            Query.abort_sem.release()
 
         return True
 
@@ -201,7 +201,7 @@ class Query:
     # add for loop to run it again multiple times with key being score and given a column number.
     def select(self, key, column, query_columns, txn_id=0, abort=False):
         if abort:
-            self.abort_sem.acquire()
+            Query.abort_sem.acquire()
         # if key not in self.table.keys:
         #    return []
 
@@ -405,7 +405,7 @@ class Query:
             self.table.lock_manager.release(rid, 'R')
 
         if abort:
-            self.abort_sem.release()
+            Query.abort_sem.release()
 
         return record
 
@@ -435,7 +435,7 @@ class Query:
 
     def update(self, key, *columns, txn_id=0, abort=False):
         if abort:
-            self.abort_sem.acquire()
+            Query.abort_sem.acquire()
         # test abort - scenario: lock fails
         # self.abort(txn_id)
         # return False
@@ -720,7 +720,7 @@ class Query:
             self.logger.write(txn_id, "update", old_val, columns[1:], key)
 
         if abort:
-            self.abort_sem.release()
+            Query.abort_sem.release()
         return True
 
     """
