@@ -37,7 +37,7 @@ class Query:
 
         record = self.select(key, 0, [1, 1, 1, 1, 1])
         if record == False:
-            old_val = []
+            old_val = ["None"]
             return False
         else:
             record = record[0]
@@ -451,7 +451,8 @@ class Query:
         # grab the old value for recovery purposes
         old_val = self.select(key, 0, [1] * self.table.num_columns)
         if old_val == False:
-            old_val = []
+            old_val = ["None"]
+            return False
 
         # Tail record default values
         indirection = 0
