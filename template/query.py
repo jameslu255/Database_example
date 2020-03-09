@@ -14,9 +14,8 @@ class Query:
 
     def __init__(self, table):
         self.table = table
-        
         self.logger = Logger("log")
-        pass
+        self.abort_sem = threading.Semaphore()
 
     """
     # internal Method
@@ -25,7 +24,10 @@ class Query:
     # Return False if record doesn't exist or is locked due to 2PL
     """
 
-    def delete(self, key, txn_id = 0):
+    def delete(self, key, txn_id=0, abort=False):
+        if abort:
+            self.abort_sem.acquire()
+
         # grab the old value for recovery purposes
         old_val = self.select(key, 0, [1] * (self.table.num_columns - 1))
 
@@ -34,19 +36,19 @@ class Query:
         rids = self.table.index.get_value(0, key)
 
         record = self.select(key, 0, [1, 1, 1, 1, 1])
-        if (record == False):
+        if record == False:
             old_val = []
             return False
         else:
             record = record[0]
-        #print("record columns are : " + str(record.columns))
+        # print("record columns are : " + str(record.columns))
 
         for base_rid in rids:
             didAcquireLock = self.table.lock_manager.acquire(base_rid, 'W')
             if not didAcquireLock:
                 self.abort(txn_id)
                 return False
-            
+
             # grab current page range 
             # pr_id = rid_base // (max_page_size / 8)
             pr_id = base_rid // (PAGE_RANGE_MAX_RECORDS + 1)
@@ -116,19 +118,24 @@ class Query:
             if i != 0:
                 self.table.index.remove_values(i, record.columns[i], list(rids)[0])
 
-
         self.table.lock_manager.release(base_rid, 'W')
         if txn_id > 0:
             self.logger.write(txn_id, "delete", old_val, None, key)
-        return True
 
+        if abort:
+            self.abort_sem.release()
+        return True
 
     """
     # Insert a record with specified columns
     # Return True upon succesful insertion
     # Returns False if insert fails for whatever reason
     """
-    def insert(self, *columns, txn_id = 0):  
+
+    def insert(self, *columns, txn_id=0, abort=False):
+        if abort:
+            self.abort_sem.acquire()
+
         self.table.base_rid.add(1)
         rid = self.table.base_rid.value
         didAcquireLock = self.table.lock_manager.acquire(rid, 'W')
@@ -166,7 +173,7 @@ class Query:
         cur_pr = self.table.page_ranges[pr_id]
 
         # SID -> RID
-        self.table.keys[key] = rid 
+        self.table.keys[key] = rid
         # RID -> page_index
         for x in range(len(columns) + NUM_CONSTANT_COLUMNS):
             # page_directory_indexes.append(self.table.free_base_pages[x])
@@ -174,12 +181,13 @@ class Query:
         self.table.base_page_directory[rid] = page_directory_indexes
 
         self.table.lock_manager.release(rid, 'W')
-        if(txn_id > 0):
-            self.logger.write(txn_id, "insert", [0]*(self.table.num_columns-1), columns[1:], columns[0])
-        
+        if (txn_id > 0):
+            self.logger.write(txn_id, "insert", [0] * (self.table.num_columns - 1), columns[1:], columns[0])
+
+        if abort:
+            self.abort_sem.release()
+
         return True
-
-
 
     """
     # Read a record with specified key
@@ -191,7 +199,9 @@ class Query:
     """
 
     # add for loop to run it again multiple times with key being score and given a column number.
-    def select(self, key, column, query_columns, txn_id = 0):
+    def select(self, key, column, query_columns, txn_id=0, abort=False):
+        if abort:
+            self.abort_sem.acquire()
         # if key not in self.table.keys:
         #    return []
 
@@ -393,6 +403,10 @@ class Query:
 
             record.append(Record(rid, key, columns))
             self.table.lock_manager.release(rid, 'R')
+
+        if abort:
+            self.abort_sem.release()
+
         return record
 
     @staticmethod
@@ -419,12 +433,13 @@ class Query:
     # Returns False if no records exist with given key or if the target record cannot be accessed due to 2PL locking
     """
 
-    def update(self, key, *columns, txn_id = 0):
+    def update(self, key, *columns, txn_id=0, abort=False):
+        if abort:
+            self.abort_sem.acquire()
         # test abort - scenario: lock fails
-        self.abort(txn_id)
-        return False
-        
-    
+        # self.abort(txn_id)
+        # return False
+
         rid_base = self.table.keys[key]  # rid of base page with key
         didAcquireLock = self.table.lock_manager.acquire(rid_base, 'W')
         if not didAcquireLock:
@@ -698,16 +713,14 @@ class Query:
         if (cur_pr.update_count.value > 0) and (cur_pr.num_tail_pages % num_total_tail_pages == 0):
             self.table.merge(cur_pr)
 
-
         self.table.lock_manager.release(rid_base, 'W')
-        
-        if(txn_id > 0):
-            print("old val: " , old_val)
 
-
+        if (txn_id > 0):
             self.logger.write(txn_id, "update", old_val, columns[1:], key)
-        return True
 
+        if abort:
+            self.abort_sem.release()
+        return True
 
     """
     :param start_range: int         # Start of the key range to aggregate 
@@ -760,9 +773,8 @@ class Query:
         # print("last abort", tid_abort)
         log_lines = self.logger.read_tid(txn_id)
         # print("loglines", log_lines)
-        # log_lines = ["tid query [old values] (new values) key", ...]
-        # line = "tid query [old values] (new values) key"
-        # ex: line = "1 update [0, 0, 0] (10, 20, 30) key"
+        # log_lines = ["tid query old values new values key", ...]
+        # ex: log_lines = ["1 insert 0,0,0,0, 2,3,4,5, 1"]
         for line in log_lines:
             parsed_line = line.split()  # ["1", "update", "0,0,0", "10,20,30", "key"]
             print(parsed_line)
@@ -773,16 +785,19 @@ class Query:
             key = int(parsed_line[4])
 
             if query_str == "update":
-                self.update(key, *old_values)     # To undo update: update w/ old values
+                # function call: update(self, key, *columns, txn_id=0, abort=False)
+                self.update(key, *old_values, 0, True)  # To undo update: update w/ old values
             elif query_str == "insert":
-                self.delete(key)                 # To undo insert: delete
+                # function call: delete(self, key, txn_id=0, abort=False):
+                self.delete(key, 0, True)  # To undo insert: delete
             elif query_str == "delete":
-                self.insert(*old_values)          # To undo delete: insert
+                # function call: insert(self, *columns, txn_id=0, abort=False):
+                self.insert(*old_values, 0, True)  # To undo delete: insert
 
     @staticmethod
     def parse_string_array(string):
-        remove_comma_at_end_of_string = string[:-1]
-        parsed_string = remove_comma_at_end_of_string.split(',')
+        string_with_no_ending_comma = string[:-1]
+        parsed_string = string_with_no_ending_comma.split(',')
 
         values = []
         for i in range(len(parsed_string)):
@@ -792,12 +807,11 @@ class Query:
 
     @staticmethod
     def parse_string_tuple(string):
-        remove_comma_at_end_of_string = string[:-1]
-        parsed_string = remove_comma_at_end_of_string.split(',')
+        string_with_no_ending_comma = string[:-1]
+        parsed_string = string_with_no_ending_comma.split(',')
 
         values = []
         for i in range(len(parsed_string)):
             value = int(parsed_string[i])
             values.append(value)
         return values
-
