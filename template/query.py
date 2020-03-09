@@ -43,6 +43,8 @@ class Query:
         for base_rid in rids:
             didAcquireLock = self.table.lock_manager.acquire(base_rid, 'W')
             if not didAcquireLock:
+                logger_lines = self.logger.read()
+                self.abort(logger_lines)
                 return False
             
             # grab current page range 
@@ -131,6 +133,8 @@ class Query:
         rid = self.table.base_rid.value
         didAcquireLock = self.table.lock_manager.acquire(rid, 'W')
         if not didAcquireLock:
+            logger_lines = self.logger.read()
+            self.abort(logger_lines)
             return False
 
         page_directory_indexes = []
@@ -202,6 +206,8 @@ class Query:
                 return []
             didAcquireLock = self.table.lock_manager.acquire(rid, 'R')
             if not didAcquireLock:
+                logger_lines = self.logger.read()
+                self.abort(logger_lines)
                 return False
             # Find Page Range ID
             pr_id = rid // (PAGE_RANGE_MAX_RECORDS + 1)
@@ -419,6 +425,8 @@ class Query:
         rid_base = self.table.keys[key]  # rid of base page with key
         didAcquireLock = self.table.lock_manager.acquire(rid_base, 'W')
         if not didAcquireLock:
+            logger_lines = self.logger.read()
+            self.abort(logger_lines)
             return False
 
         self.table.tail_rid.add(1)

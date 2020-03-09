@@ -49,6 +49,7 @@ class Transaction:
         self.logger.abort(self.id)
         # undo all the queries of this transaction
         # q = self.logger.read_tid(self.id) # queries that happened already before the abort
+        self.queries = []
         return False
         
     def commit(self):
