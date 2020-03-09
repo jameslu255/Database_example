@@ -54,7 +54,7 @@ for key in records:
             print('update on', original, 'and', updated_columns, ':', record)
         updated_columns[i] = None
 
-grades_table.index.print_trees()
+#grades_table.index.print_trees()
 
 """keys = sorted(list(records.keys()))
 for c in range(0, grades_table.num_columns):

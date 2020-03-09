@@ -1,18 +1,18 @@
-from lstore.db import Database
-from lstore.query import Query
+from template.db import Database
+from template.query import Query
 
 from random import choice, randint, sample, seed
 
 # Student Id and 4 grades
 db = Database()
-db.open('~/ECS165')
+db.open('ECS165')
 grades_table = db.get_table('Grades')
 query = Query(grades_table)
 
 # repopulate with random data
 records = {}
 seed(3562901)
-for i in range(0, 1000):
+for i in range(0, 100):
     key = 92106429 + i
     records[key] = [key, randint(0, 20), randint(0, 20), randint(0, 20), randint(0, 20)]
 keys = sorted(list(records.keys()))

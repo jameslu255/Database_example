@@ -44,6 +44,7 @@ class Transaction:
         # write 'tid aborted'
         self.logger.abort(self.id)
 
+
         # Undo the stuff that occurred
         # Step 1: clear queries
         self.queries = []

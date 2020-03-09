@@ -1,4 +1,5 @@
 import os
+import shutil
 
 LOG_LEVEL = 0
 
@@ -34,24 +35,51 @@ class Logger:
             with open(self.file_name,'a') as f:
                 f.write("0\n")
           
-        
+    def getNumTransaction(self):
+        # num = 0
+        # if os.stat(self.file_name).st_size > 0: #file not empty
+            # with open(self.file_name,'r') as f:
+                    # first_line = f.readline().strip()
+                    # num = int(first_line)
+        # return num
+        return self.num_transactions
+    
     # write the transaction into the file
     def write(self, tid, command, old_val, new_val, bid):
         with open(self.file_name, 'a') as f:
             transaction = str(tid) + " " + str(command) + " " + str(old_val) + " " + str(new_val) + " " + str(bid) + "\n"
-            self.num_transactions += 1
             f.write(transaction)
             
     def commit(self, tid):
         with open(self.file_name, 'a') as f:
             s = str(tid) + " " + "commited\n"
             f.write(s)
+        
+        
+        # update num transaction count on top of file
+        self.num_transactions += 1
+        print("tid in looger", tid, self.num_transactions)
+        from_file = open(self.file_name)
+        l = from_file.readline()
+        l = str(self.num_transactions) + "\n"
+        to_file   = open(self.file_name,mode='w')
+        to_file.write(l)
+        shutil.copyfileobj(from_file,to_file)
             
     def abort(self, tid):
         with open(self.file_name, 'a') as f:
             s = str(tid) + " " + "aborted\n"
             f.write(s)
             
+        # update num transaction count on top of file
+        self.num_transactions += 1
+        from_file = open(self.file_name)
+        l = from_file.readline()
+        l = str(self.num_transactions) + "\n"
+        to_file   = open(self.file_name,mode='w')
+        to_file.write(l)
+        shutil.copyfileobj(from_file,to_file)
+        
     # read all the transactions from the newest to oldest
     def read(self):
         # read lines bottom up

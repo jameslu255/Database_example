@@ -1,6 +1,7 @@
 from template.table import *
 from template.page import *
 from template.page_range import *
+from template.counter import *
 import mmap
 import collections
 
@@ -30,7 +31,7 @@ class BufferPoolManager:
     def __init__(self, num_columns, filename):
         # Set of pages that are dirty
         self.dirty_pages = set()
-        # Pages that are dirty
+        # Pages that are in use
         self.pinned_pages = dict()
         # Disk Page Number -> Page Range ID
         self.disk_location = dict() 
@@ -40,6 +41,8 @@ class BufferPoolManager:
         self.filename = filename
         # Number of columns including the reserved columns
         self.num_columns = num_columns
+        # Used to set dirty pages
+        self._lock = threading.Lock()
 
     def set_page_dirty(self, pr_id, page_num):
         # Transform the page number to increase with the page range
@@ -48,14 +51,12 @@ class BufferPoolManager:
         self.dirty_pages.add(page_num)
 
     def is_page_dirty(self, page_num):
-        if page_num not in self.dirty_pages:
-            return False
         return page_num in self.dirty_pages
 
     def get_num_pins(self, page_num):
         if page_num not in self.pinned_pages:
             return 0
-        return self.pinned_pages[page_num]
+        return self.pinned_pages[page_num].value
 
     def write_back(self, pages, page_num, pr_id): 
         if not self.is_page_dirty(page_num) or self.get_num_pins(page_num) > 0:
@@ -157,13 +158,20 @@ class BufferPoolManager:
         page_num = (pr_id * self.num_columns) + page_num
         # Update the pin count
         if page_num in self.pinned_pages:
-            self.pinned_pages[page_num] += 1
+            self.pinned_pages[page_num].add(1)
         else:
-            self.pinned_pages[page_num] = 1
+           self.pinned_pages[page_num] = AtomicCounter(initial = 1)
 
     def unpin(self, pr_id, page_num):
         # Transform the page number to increase with the page range
         page_num = (pr_id * self.num_columns) + page_num
-        if page_num not in self.pinned_pages:
-            return
-        self.pinned_pages[page_num] -= 1 
+        if page_num in self.pinned_pages:
+            self.pinned_pages[page_num].add(-1)
+
+    def clear_locks(self):
+        self._lock = None
+        self.pinned_pages.clear()
+
+    def reset_lock(self):
+        if self._lock == None:
+            self._lock = threading.Lock()

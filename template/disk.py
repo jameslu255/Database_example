@@ -47,6 +47,12 @@ class Disk:
         
         # add the new page range to the array 
         arr[table.name] = table
+
+        # clear out any existing locks jecause they are unserializable
+        table.lock_manager.clear_locks()
+        table.base_page_manager.clear_locks()
+        table.tail_page_manager.clear_locks()
+        table.counters_to_int()
         
         # write the new updated page range to file
         with open(self.file_name, 'wb') as page_range_file:

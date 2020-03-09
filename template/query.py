@@ -1,4 +1,5 @@
 from template.table import *
+from template.lock_manager import *
 from template.index import Index
 import time
 import threading
@@ -28,14 +29,19 @@ class Query:
         # get base rid
         # base_rid = self.table.keys[key]
         rids = self.table.index.get_value(0, key)
-        record = self.select(key, 0, [1, 1, 1, 1, 1])[0]
-        # print("record columns are : " + str(record.columns))
-        self.table.index.remove_values(0, key, list(rids)[0])
-        for i in range(len(record.columns)):
-            if i != 0:
-                self.table.index.remove_values(i, record.columns[i], list(rids)[0])
+
+        record = self.select(key, 0, [1, 1, 1, 1, 1])
+        if (record == []):
+            return
+        else:
+            record = record[0]
+        #print("record columns are : " + str(record.columns))
 
         for base_rid in rids:
+            didAcquireLock = self.table.lock_manager.acquire(base_rid, 'W')
+            if not didAcquireLock:
+                return False
+            
             # grab current page range 
             # pr_id = rid_base // (max_page_size / 8)
             pr_id = base_rid // (PAGE_RANGE_MAX_RECORDS + 1)
@@ -59,7 +65,7 @@ class Query:
                 # Fetch page from disk
                 indirection_page = self.table.base_page_manager.fetch(cur_pr.id_num, indirection_index)
                 cur_pr.base_pages[indirection_index] = indirection_page
-                self.table.size += 1
+                self.table.size.add(1)
 
             # Pin the current page
             self.table.base_page_manager.pin(cur_pr.id_num, indirection_index)
@@ -93,22 +99,32 @@ class Query:
                     # Fetch page from disk
                     indirection_page = self.table.tail_page_manager.fetch(cur_pr.id_num, indirection_index)
                     cur_pr.tail_pages[indirection_index] = indirection_page
-                    self.table.size += 1
+                    self.table.size.add(1)
 
                 indirection_value = indirection_page.get_record_int(indirection_offset)
                 self.table.tail_page_manager.unpin(cur_pr.id_num, indirection_index)
                 self.table.tail_page_manager.update_page_usage(cur_pr.id_num, indirection_index)
                 # update index to find the previous page for this column
                 rid_index -= (NUM_CONSTANT_COLUMNS + self.table.num_columns)
-        return old_val  # return old values for recovery purposes
+        self.table.index.remove_values(0, key, list(rids)[0])
+        for i in range(len(record.columns)):
+            if i != 0:
+                self.table.index.remove_values(i, record.columns[i], list(rids)[0])
+
+
+        self.table.lock_manager.release(base_rid, 'W')
+        return True
+
 
     """
     # Insert a record with specified columns
     # Return True upon succesful insertion
     # Returns False if insert fails for whatever reason
     """
-
-    def insert(self, *columns):
+    def insert(self, *columns):  
+        didAcquireLock = self.table.lock_manager.acquire(self.table.base_rid + 1, 'W')
+        if not didAcquireLock:
+            return False
         self.table.base_rid += 1
 
         page_directory_indexes = []
@@ -149,8 +165,9 @@ class Query:
             page_directory_indexes.append(cur_pr.free_base_pages[x])
         self.table.base_page_directory[self.table.base_rid] = page_directory_indexes
 
-        # for recovery purposes
-        return [0] * (self.table.num_columns - 1)
+        self.table.lock_manager.release(self.table.base_rid, 'W')
+        return True
+
 
 
     """
@@ -175,6 +192,9 @@ class Query:
         for rid in rids:
             if (rid == "F"):
                 return []
+            didAcquireLock = self.table.lock_manager.acquire(rid, 'R')
+            if not didAcquireLock:
+                return False
             # Find Page Range ID
             pr_id = rid // (PAGE_RANGE_MAX_RECORDS + 1)
             page_range = self.table.page_ranges[pr_id]
@@ -195,7 +215,7 @@ class Query:
                 # Fetch page from disk
                 indirection_page = self.table.base_page_manager.fetch(pr_id, indirection_page_index)
                 self.table.page_ranges[pr_id].base_pages[indirection_page_index] = indirection_page
-                self.table.size += 1
+                self.table.size.add(1)
 
             # Pin the page
             self.table.base_page_manager.pin(pr_id, indirection_page_index)
@@ -217,7 +237,7 @@ class Query:
                 # Fetch page from disk
                 schema_page = self.table.base_page_manager.fetch(pr_id, schema_page_index)
                 self.table.page_ranges[pr_id].base_pages[schema_page_index] = schema_page
-                self.table.size += 1
+                self.table.size.add(1)
 
             schema_data_int = schema_page.get_record_int(offset)
 
@@ -236,7 +256,7 @@ class Query:
                 # Fetch page from disk
                 tps_page = self.table.base_page_manager.fetch(pr_id, tps_page_index)
                 self.table.page_ranges[pr_id].base_pages[tps_page_index] = tps_page
-                self.table.size += 1
+                self.table.size.add(1)
 
             tps_data = tps_page.get_record_int(offset)
 
@@ -261,7 +281,7 @@ class Query:
                         base_page = self.table.base_page_manager.fetch(pr_id,
                                                                        base_page_index)
                         self.table.page_ranges[pr_id].base_pages[base_page_index] = base_page
-                        self.table.size += 1
+                        self.table.size.add(1)
 
                     # Pin the page
                     self.table.base_page_manager.pin(pr_id, base_page_index)
@@ -293,7 +313,7 @@ class Query:
                         tail_page = self.table.tail_page_manager.fetch(pr_id,
                                                                        tail_page_index)
                         self.table.page_ranges[pr_id].tail_pages[tail_page_index] = tail_page
-                        self.table.size += 1
+                        self.table.size.add(1)
 
                     # print("tail_page size", tail_page.num_records, "offset", tail_page_offset)
                     # Pin the page
@@ -324,7 +344,7 @@ class Query:
                                 indirection_page = self.table.tail_page_manager.fetch(pr_id,
                                                                                       indirection_index)
                                 self.table.page_ranges[pr_id].tail_pages[indirection_index] = indirection_page
-                                self.table.size += 1
+                                self.table.size.add(1)
 
                             # Pin the page
                             self.table.tail_page_manager.pin(pr_id, indirection_index)
@@ -349,7 +369,7 @@ class Query:
                                 tail_page = self.table.tail_page_manager.fetch(pr_id,
                                                                                correct_tail_page[0])
                                 self.table.page_ranges[pr_id].tail_pages[correct_tail_page[0]] = tail_page
-                                self.table.size += 1
+                                self.table.size.add(1)
 
                             tail_data = tail_page.get_record_int(correct_tail_page[1])
                             self.table.tail_page_manager.unpin(pr_id,
@@ -360,6 +380,7 @@ class Query:
                     columns.append(tail_data)
 
             record.append(Record(rid, key, columns))
+            self.table.lock_manager.release(rid, 'R')
         return record
 
     @staticmethod
@@ -387,6 +408,9 @@ class Query:
     """
 
     def update(self, key, *columns):
+        didAcquireLock = self.table.lock_manager.acquire(self.table.tail_rid + 1, 'W')
+        if not didAcquireLock:
+            return False
         self.table.tail_rid += 1
 
         # grab the old value for recovery purposes
@@ -429,7 +453,7 @@ class Query:
                     # Fetch page from disk
                     page = self.table.tail_page_manager.fetch(cur_pr.id_num, page_index)
                     self.table.page_ranges[pr_id].tail_pages[page_index] = page
-                    self.table.size += 1
+                    self.table.size.add(1)
                 tail_page_directory.append((page_index, page.num_records))
                 # Unpin the page
                 self.table.tail_page_manager.unpin(cur_pr.id_num, page_index)
@@ -438,7 +462,7 @@ class Query:
             # update tail page directory
             self.table.tail_page_directory[rid] = tail_page_directory
 
-            cur_pr.update_count += (5 + self.table.num_columns)
+            cur_pr.update_count.add(5 + self.table.num_columns)
         # Already initialized tail pages
         else:
             # check if a tail record was created for this key in this page 
@@ -458,7 +482,7 @@ class Query:
                 indirection_base_page = self.table.base_page_manager.fetch(cur_pr.id_num,
                                                                            indirection_base_index)
                 self.table.page_ranges[pr_id].base_pages[indirection_base_index] = indirection_base_page
-                self.table.size += 1
+                self.table.size.add(1)
 
             # Pin the page
             self.table.base_page_manager.pin(cur_pr.id_num, indirection_base_index)
@@ -488,7 +512,7 @@ class Query:
                                                                           schema_tail_page_index)
 
                     self.table.page_ranges[pr_id].tail_pages[schema_tail_page_index] = schema_tail_page
-                    self.table.size += 1
+                    self.table.size.add(1)
 
                 # Pin the page
                 self.table.tail_page_manager.pin(cur_pr.id_num, schema_tail_page_index)
@@ -521,7 +545,7 @@ class Query:
                             # Fetch page from disk
                             page = self.table.tail_page_manager.fetch(cur_pr.id_num, page_index)
                             self.table.page_ranges[pr_id].tail_pages[page_index] = page
-                            self.table.size += 1
+                            self.table.size.add(1)
 
                         # Pin the page
                         self.table.tail_page_manager.pin(cur_pr.id_num, page_index)
@@ -534,7 +558,7 @@ class Query:
                     # set map of RID -> tail page indexes
                     self.table.tail_page_directory[rid] = tail_page_directory
                     # Update number of updates for current page range
-                    cur_pr.update_count += (5 + self.table.num_columns)
+                    cur_pr.update_count.add(5 + self.table.num_columns)
 
         # find schema encoding of the new tail record
         # by comparing value of all the columns of this new tail record
@@ -550,7 +574,7 @@ class Query:
                 # Fetch page from disk
                 base_page = self.table.base_page_manager.fetch(cur_pr.id_num, base_page_index)
                 self.table.page_ranges[pr_id].base_pages[base_page_index] = base_page
-                self.table.size += 1
+                self.table.size.add(1)
 
             # pin the page
             self.table.base_page_manager.pin(cur_pr.id_num, base_page_index)
@@ -584,8 +608,19 @@ class Query:
                 # print(f"Appending value {columns[x]} into tail page at index {x + NUM_CONSTANT_COLUMNS}")
                 self.table.append_tail_page_record(x + NUM_CONSTANT_COLUMNS, columns[x], rid_base)
                 base_page_num = self.table.base_page_directory[rid_base][x + 5]
-                base_record_val = cur_pr.base_pages[base_page_num].get_record_int(rid_offset)
-                self.table.index.update_btree(x, base_record_val, rid_base, columns[x])  # james added this
+
+                page = cur_pr.base_pages[base_page_num]
+                if page == None:
+                    # if no space for new page
+                    self.table.check_need_evict()
+                    # Fetch page from disk
+                    page = self.table.base_page_manager.fetch(cur_pr.id_num, page_index)
+                    self.table.page_ranges[pr_id].base_pages[page_index] = page
+                    self.table.size.add(1)
+
+                base_record_val = page.get_record_int(rid_offset)
+                if (x != 0):
+                    self.table.index.update_btree(x, base_record_val, rid_base, columns[x])  # james added this
         ### ------------------------------------------------------------------------------------------ ###
 
         # Add the indices to the tail page directory
@@ -601,7 +636,7 @@ class Query:
                 # Fetch page from disk
                 page = self.table.tail_page_manager.fetch(cur_pr.id_num, page_index)
                 self.table.page_ranges[pr_id].tail_pages[page_index] = page
-                self.table.size += 1
+                self.table.size.add(1)
 
             # pin the page
             self.table.tail_page_manager.pin(cur_pr.id_num, page_index)
@@ -624,7 +659,7 @@ class Query:
             # Fetch page from disk
             schema_base_page = self.table.base_page_manager.fetch(cur_pr.id_num, schema_enc_base_page_idx)
             self.table.page_ranges[pr_id].base_pages[schema_enc_base_page_idx] = schema_base_page
-            self.table.size += 1
+            self.table.size.add(1)
 
         self.table.base_page_manager.pin(cur_pr.id_num, schema_enc_base_page_idx)
         last_base_schema_enc = schema_base_page.get_record_int(rid_offset)
@@ -639,11 +674,13 @@ class Query:
         num_columns = 5 + self.table.num_columns  # number of columns in this table
         num_total_tail_pages = tail_page_sets * num_columns  # gives us what to mod by
 
-        if (cur_pr.update_count > 0) and (cur_pr.num_tail_pages % num_total_tail_pages == 0):
+        if (cur_pr.update_count.value > 0) and (cur_pr.num_tail_pages % num_total_tail_pages == 0):
             self.table.merge(cur_pr)
 
-        # return old val for transaction
-        return old_val
+
+        self.table.lock_manager.release(self.table.tail_rid, 'W')
+        return True
+
 
     """
     :param start_range: int         # Start of the key range to aggregate 
