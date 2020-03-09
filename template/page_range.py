@@ -1,4 +1,5 @@
 from template.config import *
+from template.counter import *
 
 
 class PageRange:
@@ -12,10 +13,20 @@ class PageRange:
         self.free_base_pages = []
         self.free_tail_pages = []
 
-        self.update_count = 0       # Track number of updates a page range has had (for merge purposes)
+        self.update_count = AtomicCounter()   # Track number of updates a page range has had (for merge purposes)
 
     # check if our page range still has space to add more pages
     def page_range_has_capacity(self):
         # use 16 for now number changes depending on how many max pages we want to store
         # print("checking capacity, cur at ", self.num_base_pages)
         return (self.max_capacity - self.num_base_pages) >= 0
+
+    def make_count_serializable(self):
+        # if counter is an AtomicCounter, convert to int for serialization
+        if isinstance(self.update_count, AtomicCounter):
+            self.update_count = self.update_count.value
+
+    def reset_counter(self):
+        # if counter is an int, convert to AtomicCounter during deserialization
+        if isinstance(self.update_count, int):
+            self.update_count = AtomicCounter(self.update_count)
