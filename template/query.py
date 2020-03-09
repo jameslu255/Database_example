@@ -43,6 +43,7 @@ class Query:
         for base_rid in rids:
             didAcquireLock = self.table.lock_manager.acquire(base_rid, 'W')
             if not didAcquireLock:
+                self.abort(txn_id)
                 return False
             
             # grab current page range 
@@ -131,6 +132,7 @@ class Query:
         rid = self.table.base_rid.value
         didAcquireLock = self.table.lock_manager.acquire(rid, 'W')
         if not didAcquireLock:
+            self.abort(txn_id)
             return False
 
         page_directory_indexes = []
@@ -188,7 +190,7 @@ class Query:
     """
 
     # add for loop to run it again multiple times with key being score and given a column number.
-    def select(self, key, column, query_columns):
+    def select(self, key, column, query_columns, txn_id = 0):
         # if key not in self.table.keys:
         #    return []
 
@@ -202,6 +204,7 @@ class Query:
                 return []
             didAcquireLock = self.table.lock_manager.acquire(rid, 'R')
             if not didAcquireLock:
+                self.abort(txn_id)
                 return False
             # Find Page Range ID
             pr_id = rid // (PAGE_RANGE_MAX_RECORDS + 1)
@@ -423,6 +426,7 @@ class Query:
         rid_base = self.table.keys[key]  # rid of base page with key
         didAcquireLock = self.table.lock_manager.acquire(rid_base, 'W')
         if not didAcquireLock:
+            self.abort(txn_id)
             return False
 
         self.table.tail_rid.add(1)
@@ -761,11 +765,11 @@ class Query:
             key = int(parsed_line[4])
 
             if query_str == "update":
-                self.update(key, *old_values)     # To undo update: update w/ old values
+                self.update(key, *old_values, txn_id)     # To undo update: update w/ old values
             elif query_str == "insert":
-                self.delete(*key)                 # To undo insert: delete
+                self.delete(key, txn_id)                 # To undo insert: delete
             elif query_str == "delete":
-                self.insert(*old_values)          # To undo delete: insert
+                self.insert(*old_values, txn_id)          # To undo delete: insert
 
     @staticmethod
     def parse_string_array(string):
