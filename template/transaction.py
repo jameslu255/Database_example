@@ -7,12 +7,13 @@ class Transaction:
     """
     # Creates a transaction object.
     """
-    def __init__(self, id):
+    def __init__(self):
         self.queries = []
         
         self.logger = Logger("log")
-        
-        self.id = self.logger.getNumTransaction() + 1
+        # update num transaction count on top of file
+        Logger.num_transactions.add(1)
+        self.id = self.logger.getNumTransaction()
         
         print("this is transaction #",self.id)
         

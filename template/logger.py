@@ -65,9 +65,7 @@ class Logger:
             s = str(tid) + " " + "commited\n"
             f.write(s)
         
-        # update num transaction count on top of file
-        Logger.num_transactions.add(1)
-        print("tid in looger", tid, num_transactions)
+        print("tid in looger", tid, Logger.num_transactions.value)
         """
         from_file = open(self.file_name)
         l = from_file.readline()
@@ -82,8 +80,6 @@ class Logger:
             s = str(tid) + " " + "aborted\n"
             f.write(s)
             
-        # update num transaction count on top of file
-        Logger.num_transactions.add(1)
         """
         from_file = open(self.file_name)
         l = from_file.readline()
