@@ -34,8 +34,9 @@ class Query:
         rids = self.table.index.get_value(0, key)
 
         record = self.select(key, 0, [1, 1, 1, 1, 1])
-        if (record == []):
-            return
+        if (record == False):
+            old_val = []
+            return False
         else:
             record = record[0]
         #print("record columns are : " + str(record.columns))
@@ -421,6 +422,7 @@ class Query:
     def update(self, key, *columns, txn_id = 0):
         # test abort - scenario: lock fails
         self.abort(txn_id)
+        return False
         
     
         rid_base = self.table.keys[key]  # rid of base page with key
@@ -433,6 +435,8 @@ class Query:
 
         # grab the old value for recovery purposes
         old_val = self.select(key, 0, [1] * self.table.num_columns)
+        if old_val == False:
+            old_val = []
 
         # Tail record default values
         indirection = 0
@@ -698,6 +702,9 @@ class Query:
         self.table.lock_manager.release(rid_base, 'W')
         
         if(txn_id > 0):
+            print("old val: " , old_val)
+
+
             self.logger.write(txn_id, "update", old_val, columns[1:], key)
         return True
 
@@ -758,6 +765,7 @@ class Query:
         # ex: line = "1 update [0, 0, 0] (10, 20, 30) key"
         for line in log_lines:
             parsed_line = line.split()  # ["1", "update", "0,0,0", "10,20,30", "key"]
+            print(parsed_line)
             tid = int(parsed_line[0])
             query_str = parsed_line[1]
             old_values = self.parse_string_array(parsed_line[2])
@@ -765,16 +773,16 @@ class Query:
             key = int(parsed_line[4])
 
             if query_str == "update":
-                self.update(key, *old_values, txn_id)     # To undo update: update w/ old values
+                self.update(key, *old_values)     # To undo update: update w/ old values
             elif query_str == "insert":
-                self.delete(key, txn_id)                 # To undo insert: delete
+                self.delete(key)                 # To undo insert: delete
             elif query_str == "delete":
-                self.insert(*old_values, txn_id)          # To undo delete: insert
+                self.insert(*old_values)          # To undo delete: insert
 
     @staticmethod
     def parse_string_array(string):
-        x = re.findall("\[(.*?)\]", string)
-        parsed_string = x[0].split(', ')
+        remove_comma_at_end_of_string = string[:-1]
+        parsed_string = remove_comma_at_end_of_string.split(',')
 
         values = []
         for i in range(len(parsed_string)):
@@ -784,8 +792,8 @@ class Query:
 
     @staticmethod
     def parse_string_tuple(string):
-        x = re.findall("\((.*?)\)", string)
-        parsed_string = x[0].split(', ')
+        remove_comma_at_end_of_string = string[:-1]
+        parsed_string = remove_comma_at_end_of_string.split(',')
 
         values = []
         for i in range(len(parsed_string)):

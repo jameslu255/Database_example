@@ -57,7 +57,20 @@ class Logger:
     # write the transaction into the file
     def write(self, tid, command, old_val, new_val, bid):
         with open(self.file_name, 'a') as f:
-            transaction = str(tid) + " " + str(command) + " " + str(old_val) + " " + str(new_val) + " " + str(bid) + "\n"
+            transaction = str(tid) + " " + str(command) + " " # + str(old_val) + " " + str(new_val) + " " + str(bid) + "\n"
+            print(transaction)
+            for o in old_val:
+                transaction += str(o) + ","
+
+            transaction += " "
+
+            print(transaction)
+            for n in new_val:
+                transaction += str(n) + ","
+
+            transaction += " "
+
+            transaction += str(bid) + "\n"
             f.write(transaction)
             
     def commit(self, tid):
