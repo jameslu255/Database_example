@@ -65,7 +65,7 @@ class Logger:
             s = str(tid) + " " + "commited\n"
             f.write(s)
         
-        print("tid in looger", tid, Logger.num_transactions.value)
+        # print("tid in looger", tid, Logger.num_transactions.value)
         """
         from_file = open(self.file_name)
         l = from_file.readline()
@@ -88,7 +88,17 @@ class Logger:
         to_file.write(l)
         shutil.copyfileobj(from_file,to_file)
         """
-        
+    
+    def last_abort(self):
+        # read lines bottom up
+        for line in reversed(list(open(self.file_name))):
+            s = line.rstrip()
+            arg = line.rstrip().split()
+            if arg[1] == "aborted":
+                return arg[0]
+                
+        return -1
+                    
     # read all the transactions from the newest to oldest
     def read(self):
         # read lines bottom up
@@ -103,8 +113,9 @@ class Logger:
             s = line.rstrip()
             arg = line.rstrip().split()
             if arg[0] == str(tid):
-                transactions.append(s)
-                print(s)
+                if arg[1] != "aborted" and arg[1] != "commited":
+                    transactions.append(s)
+                    # print(s)
         
         return transactions
         
@@ -122,7 +133,7 @@ class Logger:
             if arg[0] == str(tids[x]):
                 x += 1
                 transactions.append(s)
-                print(s)
+                # print(s)
         
         return transactions
 

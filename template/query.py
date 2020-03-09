@@ -43,8 +43,6 @@ class Query:
         for base_rid in rids:
             didAcquireLock = self.table.lock_manager.acquire(base_rid, 'W')
             if not didAcquireLock:
-                logger_lines = self.logger.read()
-                self.abort(logger_lines)
                 return False
             
             # grab current page range 
@@ -133,8 +131,6 @@ class Query:
         rid = self.table.base_rid.value
         didAcquireLock = self.table.lock_manager.acquire(rid, 'W')
         if not didAcquireLock:
-            logger_lines = self.logger.read()
-            self.abort(logger_lines)
             return False
 
         page_directory_indexes = []
@@ -206,8 +202,6 @@ class Query:
                 return []
             didAcquireLock = self.table.lock_manager.acquire(rid, 'R')
             if not didAcquireLock:
-                logger_lines = self.logger.read()
-                self.abort(logger_lines)
                 return False
             # Find Page Range ID
             pr_id = rid // (PAGE_RANGE_MAX_RECORDS + 1)
@@ -422,11 +416,13 @@ class Query:
     """
 
     def update(self, key, *columns, txn_id = 0):
+        # test abort - scenario: lock fails
+        self.abort(txn_id)
+        
+    
         rid_base = self.table.keys[key]  # rid of base page with key
         didAcquireLock = self.table.lock_manager.acquire(rid_base, 'W')
         if not didAcquireLock:
-            logger_lines = self.logger.read()
-            self.abort(logger_lines)
             return False
 
         self.table.tail_rid.add(1)
@@ -748,7 +744,11 @@ class Query:
             return u
         return False
 
-    def abort(self, log_lines):
+    def abort(self, txn_id):
+        # tid_abort = self.logger.last_abort
+        # print("last abort", tid_abort)
+        log_lines = self.logger.read_tid(txn_id)
+        # print("loglines", log_lines)
         # log_lines = ["tid query [old values] (new values) key", ...]
         # line = "tid query [old values] (new values) key"
         # ex: line = "1 update [0, 0, 0] (10, 20, 30) key"
@@ -761,11 +761,11 @@ class Query:
             key = int(parsed_line[4])
 
             if query_str == "update":
-                self.update(key, *old_values, tid)     # To undo update: update w/ old values
+                self.update(key, *old_values)     # To undo update: update w/ old values
             elif query_str == "insert":
-                self.delete(key, tid)                  # To undo insert: delete
+                self.delete(*key)                 # To undo insert: delete
             elif query_str == "delete":
-                self.insert(*old_values, tid)          # To undo delete: insert
+                self.insert(*old_values)          # To undo delete: insert
 
     @staticmethod
     def parse_string_array(string):
