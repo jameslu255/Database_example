@@ -5,6 +5,7 @@ from template.bp_manager import *
 from template.counter import *
 from template.lock_manager import *
 from template.logger import *
+import threading
 import copy
 
 from time import time
@@ -95,6 +96,10 @@ class Table:
 
         # LockManager
         self.lock_manager = LockManager()
+
+        self.tail_page_lock = threading.Lock()
+        self.base_page_lock = threading.Lock()
+        self.page_range_lock = threading.Lock()
 
         # will increment each time we create a new page range (acts as unique ID used to differentiate PR's)
         # also will tell us index of current pr in the pr array
@@ -472,15 +477,17 @@ class Table:
         # Check if we have room for the new page
 
         # add this tail page to the page range's tail list
-        cur_pr.tail_pages.append(new_page)
+        with self.tail_page_lock:
+            cur_pr.tail_pages.append(new_page)
         self.size.add(1)
 
         # keep track of index of page relative to array index
-        if (len(cur_pr.free_tail_pages) < self.num_columns + 5):  # when initializing
-            cur_pr.free_tail_pages.append(len(cur_pr.tail_pages) - 1)
-            # self.free_tail_pages.append(len(self.tail_pages) - 1)
-        else:  # when creating new page and need to update the index
-            cur_pr.free_tail_pages[col] = len(cur_pr.tail_pages) - 1
+        with self.tail_page_lock:
+            if (len(cur_pr.free_tail_pages) < self.num_columns + 5):  # when initializing
+                cur_pr.free_tail_pages.append(len(cur_pr.tail_pages) - 1)
+                # self.free_tail_pages.append(len(self.tail_pages) - 1)
+            else:  # when creating new page and need to update the index
+                cur_pr.free_tail_pages[col] = len(cur_pr.tail_pages) - 1
 
         # Add page to lru
         self.tail_page_manager.update_page_usage(cur_pr.id_num, len(cur_pr.tail_pages) - 1)
@@ -502,8 +509,8 @@ class Table:
 
             # Fetch the page from disk
             cur_page = self.tail_page_manager.fetch(cur_pr.id_num, index_relative)
-
-            self.page_ranges[pr_id].tail_pages[index_relative] = cur_page
+            with self.tail_page_lock:
+                self.page_ranges[cur_pr.id_num].tail_pages[index_relative] = cur_page
             self.size.add(1)
 
         # Pin the current Page
@@ -519,12 +526,13 @@ class Table:
             # write to new page
             page.write(value)
             # append the new page
-            cur_pr.tail_pages.append(page)
-            # pagerangenum * num_cols + page
-            # add this tail page to the page range's tail list
-            new_tail_page_num = len(cur_pr.tail_pages) - 1
-            # update free page index to point to new blank page
-            cur_pr.free_tail_pages[col] = new_tail_page_num
+            with self.tail_page_lock:
+                cur_pr.tail_pages.append(page)
+                # pagerangenum * num_cols + page
+                # add this tail page to the page range's tail list
+                new_tail_page_num = len(cur_pr.tail_pages) - 1
+                # update free page index to point to new blank page
+                cur_pr.free_tail_pages[col] = new_tail_page_num
             # Update LRU
             self.tail_page_manager.update_page_usage(cur_pr.id_num, new_tail_page_num)
             # Page is dirty
@@ -551,7 +559,8 @@ class Table:
 
             cur_page = self.tail_page_manager.fetch(cur_pr.id_num,
                                                     column_index)
-            self.page_ranges[pr_id].tail_pages[column_index] = cur_page
+            with self.tail_page_lock:
+                self.page_ranges[pr_id].tail_pages[column_index] = cur_page
             self.size.add(1)
 
         # Pin the current Page
@@ -578,18 +587,19 @@ class Table:
             # If we don't have enough space to bring in another page
             self.check_need_evict()
 
-            cur_page = self.base_page_manager.fetch(cur_pr.id_num, base_page_index)
-            self.page_ranges[pr_id].base_pages[base_page_index] = cur_page
+            cur_page = self.base_page_manager.fetch(cur_pr.id_num.value, base_page_index)
+            with self.tail_page_lock:
+                self.page_ranges[pr_id].base_pages[base_page_index] = cur_page
             self.size.add(1)
 
         # Pin the page
-        self.base_page_manager.pin(cur_pr.id_num, base_page_index)
+        self.base_page_manager.pin(cur_pr.id_num.value, base_page_index)
         # Update LRU
-        self.base_page_manager.update_page_usage(cur_pr.id_num, base_page_index)
+        self.base_page_manager.update_page_usage(cur_pr.id_num.value, base_page_index)
         # Page is dirty
-        self.base_page_manager.set_page_dirty(cur_pr.id_num, base_page_index)
+        self.base_page_manager.set_page_dirty(cur_pr.id_num.value, base_page_index)
         # Unpin the page
-        self.base_page_manager.unpin(cur_pr.id_num, base_page_index)
+        self.base_page_manager.unpin(cur_pr.id_num.value, base_page_index)
         # Get the record's offset
         base_offset = rid - (PAGE_RANGE_MAX_RECORDS * pr_id)
         # Set the record's value
@@ -610,13 +620,14 @@ class Table:
         new_page = Page()
         self.size.add(1)
         # also add page to the list of base pages in pr
-        cur_pr = self.page_ranges[self.cur_page_range_id]
-        cur_pr.base_pages.append(new_page)
-        cur_pr.free_base_pages.append(len(cur_pr.base_pages) - 1)
+        cur_pr = self.page_ranges[self.cur_page_range_id.value]
+        with self.base_page_lock:
+            cur_pr.base_pages.append(new_page)
+            cur_pr.free_base_pages.append(len(cur_pr.base_pages) - 1)
         # Update LRU
-        self.base_page_manager.update_page_usage(self.cur_page_range_id,
+        self.base_page_manager.update_page_usage(self.cur_page_range_id.value,
                                             len(cur_pr.base_pages) - 1)
-        self.base_page_manager.set_page_dirty(self.cur_page_range_id,
+        self.base_page_manager.set_page_dirty(self.cur_page_range_id.value,
                                             len(cur_pr.base_pages) - 1)
 
     def append_base_page_record(self, index, value, rid):
@@ -631,7 +642,8 @@ class Table:
             # print("making new pange range")
             self.cur_page_range_id.add(1)  # this pr is full - update the pr id
             new_pr = PageRange(self.cur_page_range_id, self.num_columns)
-            self.page_ranges.append(new_pr)  # add this new pr with new id to the PR list
+            with self.page_range_lock:
+                self.page_ranges.append(new_pr)  # add this new pr with new id to the PR list
             # initialize base pages on new pange range creation
             for x in range(self.num_columns + 5):
                 self.create_base_page(x)
@@ -645,12 +657,13 @@ class Table:
             self.check_need_evict()
 
             # Fetch the page
-            cur_page = self.base_page_manager.fetch(pr.id_num, index_relative)
-            self.page_ranges[pr_id].base_pages[index_relative] = cur_page
+            cur_page = self.base_page_manager.fetch(pr.id_num.value, index_relative)
+            with self.base_page_lock:
+                self.page_ranges[pr_id].base_pages[index_relative] = cur_page
             self.size.add(1)
 
         # Pin the page
-        self.base_page_manager.pin(pr.id_num, index_relative)
+        self.base_page_manager.pin(pr.id_num.value, index_relative)
         error = cur_page.write(value)
         if error == -1:  # maximum size reached in page
             # Check if we have room for the new page
@@ -662,41 +675,43 @@ class Table:
             # self.append_base_page_to_pr(page)
             # also add page to the list of base pages in pr
             page.write(value)
-            pr.base_pages.append(page)
-            pr.free_base_pages.append(len(pr.base_pages) - 1)
+            with self.base_page_lock:
+                pr.base_pages.append(page)
+                pr.free_base_pages.append(len(pr.base_pages) - 1)
 
             # Update LRU
-            self.base_page_manager.update_page_usage(pr.id_num, len(pr.base_pages) - 1)
-            self.base_page_manager.set_page_dirty(pr.id_num, len(pr.base_pages) - 1)
+            self.base_page_manager.update_page_usage(pr.id_num.value, len(pr.base_pages) - 1)
+            self.base_page_manager.set_page_dirty(pr.id_num.value, len(pr.base_pages) - 1)
             # increment the num pages count in either case (full or not full since we are adding a new page)
             pr.num_base_pages.add(1)
             self.size.add(1)
 
         # Page is dirty
-        self.base_page_manager.set_page_dirty(pr.id_num, index_relative)
+        self.base_page_manager.set_page_dirty(pr.id_num.value, index_relative)
 
         # Update LRU
-        self.base_page_manager.update_page_usage(pr.id_num, index_relative)
+        self.base_page_manager.update_page_usage(pr.id_num.value, index_relative)
 
         # Unpin the page
-        self.base_page_manager.unpin(pr.id_num, index_relative)
+        self.base_page_manager.unpin(pr.id_num.value, index_relative)
         # print("current page range: " + str(cur_pr_id_num))
 
     # creates a new page range if the current one gets filled up/does housekeeping stuff (update vals)
     def create_new_pr_if_necessary(self):
         # get most recent page range from pr array
-        cur_pr = self.page_ranges[self.cur_page_range_id]
+        cur_pr = self.page_ranges[self.cur_page_range_id.value]
         # check that this page range can still hold more page's
         # print("current num pages in pr: " + str(cur_pr.num_base_pages))
         # print("current page before cap check range id: " + str(self.cur_page_range_id))
         if not cur_pr.page_range_has_capacity():
             # self.actual_page_directory.append(cur_pr.end_rid_base)      # store the max rid into the array
             self.cur_page_range_id += 1  # this pr is full - update the pr id
-            self.page_ranges.append(
-                PageRange(self.cur_page_range_id, self.num_columns))  # add this new pr with new id to the PR list
+            with self.page_range_lock:
+                self.page_ranges.append(
+                    PageRange(self.cur_page_range_id, self.num_columns))  # add this new pr with new id to the PR list
 
         # need to reassign cur pr in case we created a new PR (should not ref to old one)
-        cur_pr = self.page_ranges[self.cur_page_range_id]
+        cur_pr = self.page_ranges[self.cur_page_range_id.value]
         # increment the num pages count in either case (full or not full since we are adding a new page)
         cur_pr.num_base_pages.add(1)
 
