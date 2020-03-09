@@ -1,6 +1,7 @@
 from template.table import *
 from template.lock_manager import *
 from template.index import Index
+from template.logger import Logger
 import time
 import threading
 import re
@@ -13,6 +14,8 @@ class Query:
 
     def __init__(self, table):
         self.table = table
+        
+        self.logger = Logger("log")
         pass
 
     """
@@ -22,7 +25,7 @@ class Query:
     # Return False if record doesn't exist or is locked due to 2PL
     """
 
-    def delete(self, key):
+    def delete(self, key, txn_id = 0):
         # grab the old value for recovery purposes
         old_val = self.select(key, 0, [1] * (self.table.num_columns - 1))
 
@@ -113,6 +116,8 @@ class Query:
 
 
         self.table.lock_manager.release(base_rid, 'W')
+        if txn_id > 0:
+            self.logger.write(txn_id, "delete", old_val, None, key)
         return True
 
 
@@ -166,6 +171,9 @@ class Query:
         self.table.base_page_directory[self.table.base_rid] = page_directory_indexes
 
         self.table.lock_manager.release(self.table.base_rid, 'W')
+        if(txn_id > 0):
+            self.logger.write(txn_id, "insert", [0]*(self.table.num_columns-1), columns[1:], columns[0])
+        
         return True
 
 
@@ -679,6 +687,9 @@ class Query:
 
 
         self.table.lock_manager.release(self.table.tail_rid, 'W')
+        
+        if(txn_id > 0):
+            self.logger.write(txn_id, "update", old_val, columns[1:], key)
         return True
 
 
