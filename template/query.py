@@ -66,20 +66,20 @@ class Query:
                 self.table.check_need_evict()
 
                 # Fetch page from disk
-                indirection_page = self.table.base_page_manager.fetch(cur_pr.id_num, indirection_index)
+                indirection_page = self.table.base_page_manager.fetch(cur_pr.id_num.value, indirection_index)
                 cur_pr.base_pages[indirection_index] = indirection_page
                 self.table.size.add(1)
 
             # Pin the current page
-            self.table.base_page_manager.pin(cur_pr.id_num, indirection_index)
+            self.table.base_page_manager.pin(cur_pr.id_num.value, indirection_index)
             indirection_value = indirection_page.get_record_int(offset)
 
             if indirection_value == 0:
                 return old_val  # return the old value for recovery purposes
 
             # Unpin the current page
-            self.table.base_page_manager.unpin(cur_pr.id_num, indirection_index)
-            self.table.base_page_manager.update_page_usage(cur_pr.id_num, indirection_index)
+            self.table.base_page_manager.unpin(cur_pr.id_num.value, indirection_index)
+            self.table.base_page_manager.update_page_usage(cur_pr.id_num.value, indirection_index)
             # index arithmetic to find the latest tail page and its predecessors
             rid_index = self.table.tail_page_directory[indirection_value][RID_COLUMN][0]  # index part of tuple
 
@@ -93,20 +93,20 @@ class Query:
                 indirection_offset = self.table.tail_page_directory[indirection_value][INDIRECTION_COLUMN][1]  # offset
                 # indirection_page = self.table.tail_pages[indirection_index]
                 indirection_page = cur_pr.tail_pages[indirection_index]
-                self.table.tail_page_manager.pin(cur_pr.id_num, indirection_index)
+                self.table.tail_page_manager.pin(cur_pr.id_num.value, indirection_index)
                 # If page is not in bufferpool, read from disk
                 if (indirection_page == None):
                     # if no space for new page
                     self.table.check_need_evict()
 
                     # Fetch page from disk
-                    indirection_page = self.table.tail_page_manager.fetch(cur_pr.id_num, indirection_index)
+                    indirection_page = self.table.tail_page_manager.fetch(cur_pr.id_num.value, indirection_index)
                     cur_pr.tail_pages[indirection_index] = indirection_page
                     self.table.size.add(1)
 
                 indirection_value = indirection_page.get_record_int(indirection_offset)
-                self.table.tail_page_manager.unpin(cur_pr.id_num, indirection_index)
-                self.table.tail_page_manager.update_page_usage(cur_pr.id_num, indirection_index)
+                self.table.tail_page_manager.unpin(cur_pr.id_num.value, indirection_index)
+                self.table.tail_page_manager.update_page_usage(cur_pr.id_num.value, indirection_index)
                 # update index to find the previous page for this column
                 rid_index -= (NUM_CONSTANT_COLUMNS + self.table.num_columns)
         self.table.index.remove_values(0, key, list(rids)[0])
@@ -188,7 +188,7 @@ class Query:
     """
 
     # add for loop to run it again multiple times with key being score and given a column number.
-    def select(self, key, column, query_columns):
+    def select(self, key, column, query_columns, txn_id = 0):
         # if key not in self.table.keys:
         #    return []
 
@@ -455,18 +455,18 @@ class Query:
                 page = cur_pr.tail_pages[page_index]
                 # If page is not in bufferpool, read from disk
                 # Pin the page
-                self.table.tail_page_manager.pin(cur_pr.id_num, page_index)
+                self.table.tail_page_manager.pin(cur_pr.id_num.value, page_index)
                 if (page == None):
                     # if no space for new page
                     self.table.check_need_evict()
                     # Fetch page from disk
-                    page = self.table.tail_page_manager.fetch(cur_pr.id_num, page_index)
+                    page = self.table.tail_page_manager.fetch(cur_pr.id_num.value, page_index)
                     self.table.page_ranges[pr_id].tail_pages[page_index] = page
                     self.table.size.add(1)
                 tail_page_directory.append((page_index, page.num_records))
                 # Unpin the page
-                self.table.tail_page_manager.unpin(cur_pr.id_num, page_index)
-                self.table.tail_page_manager.update_page_usage(cur_pr.id_num, page_index)
+                self.table.tail_page_manager.unpin(cur_pr.id_num.value, page_index)
+                self.table.tail_page_manager.update_page_usage(cur_pr.id_num.value, page_index)
                 # tail_page_directory.append(self.table.free_tail_pages[x])
             # update tail page directory
             self.table.tail_page_directory[rid] = tail_page_directory
@@ -488,18 +488,18 @@ class Query:
                 self.table.check_need_evict()
 
                 # Fetch page from disk
-                indirection_base_page = self.table.base_page_manager.fetch(cur_pr.id_num,
+                indirection_base_page = self.table.base_page_manager.fetch(cur_pr.id_num.value,
                                                                            indirection_base_index)
                 self.table.page_ranges[pr_id].base_pages[indirection_base_index] = indirection_base_page
                 self.table.size.add(1)
 
             # Pin the page
-            self.table.base_page_manager.pin(cur_pr.id_num, indirection_base_index)
+            self.table.base_page_manager.pin(cur_pr.id_num.value, indirection_base_index)
             indirection_value = indirection_base_page.get_record_int(rid_offset)
             indirection = indirection_value
             # Unpin the page
-            self.table.base_page_manager.unpin(cur_pr.id_num, indirection_base_index)
-            self.table.base_page_manager.update_page_usage(cur_pr.id_num, indirection_base_index)
+            self.table.base_page_manager.unpin(cur_pr.id_num.value, indirection_base_index)
+            self.table.base_page_manager.update_page_usage(cur_pr.id_num.value, indirection_base_index)
 
             # Value has been updated before
             if (indirection_value != 0):
@@ -517,21 +517,21 @@ class Query:
                     # if no space for new page
                     self.table.check_need_evict()
                     # Fetch page from disk
-                    schema_tail_page = self.table.tail_page_manager.fetch(cur_pr.id_num,
+                    schema_tail_page = self.table.tail_page_manager.fetch(cur_pr.id_num.value,
                                                                           schema_tail_page_index)
 
                     self.table.page_ranges[pr_id].tail_pages[schema_tail_page_index] = schema_tail_page
                     self.table.size.add(1)
 
                 # Pin the page
-                self.table.tail_page_manager.pin(cur_pr.id_num, schema_tail_page_index)
+                self.table.tail_page_manager.pin(cur_pr.id_num.value, schema_tail_page_index)
 
                 # print("indirection value: ", indirection_value)
                 # Get the schema encoding of the latest tail page
                 latest_schema = schema_tail_page.get_record_int(offset)
                 # Unpin the page
-                self.table.tail_page_manager.unpin(cur_pr.id_num, schema_tail_page_index)
-                self.table.tail_page_manager.update_page_usage(cur_pr.id_num, schema_tail_page_index)
+                self.table.tail_page_manager.unpin(cur_pr.id_num.value, schema_tail_page_index)
+                self.table.tail_page_manager.update_page_usage(cur_pr.id_num.value, schema_tail_page_index)
                 # print("latest_schema: ", latest_schema)
                 if latest_schema > 0:  # there is at least one column that's updated
                     # create tail pages for everyone
@@ -552,16 +552,16 @@ class Query:
                             # if no space for new page
                             self.table.check_need_evict()
                             # Fetch page from disk
-                            page = self.table.tail_page_manager.fetch(cur_pr.id_num, page_index)
+                            page = self.table.tail_page_manager.fetch(cur_pr.id_num.value, page_index)
                             self.table.page_ranges[pr_id].tail_pages[page_index] = page
                             self.table.size.add(1)
 
                         # Pin the page
-                        self.table.tail_page_manager.pin(cur_pr.id_num, page_index)
+                        self.table.tail_page_manager.pin(cur_pr.id_num.value, page_index)
                         tail_page_directory.append((page_index, page.num_records))
                         # Unpin the page
-                        self.table.tail_page_manager.unpin(cur_pr.id_num, page_index)
-                        self.table.tail_page_manager.update_page_usage(cur_pr.id_num, page_index)
+                        self.table.tail_page_manager.unpin(cur_pr.id_num.value, page_index)
+                        self.table.tail_page_manager.update_page_usage(cur_pr.id_num.value, page_index)
                         # tail_page_directory.append(self.table.free_tail_pages[x])
                     # update tail page directory
                     # set map of RID -> tail page indexes
@@ -581,16 +581,16 @@ class Query:
                 # if no space for new page
                 self.table.check_need_evict()
                 # Fetch page from disk
-                base_page = self.table.base_page_manager.fetch(cur_pr.id_num, base_page_index)
+                base_page = self.table.base_page_manager.fetch(cur_pr.id_num.value, base_page_index)
                 self.table.page_ranges[pr_id].base_pages[base_page_index] = base_page
                 self.table.size.add(1)
 
             # pin the page
-            self.table.base_page_manager.pin(cur_pr.id_num, base_page_index)
+            self.table.base_page_manager.pin(cur_pr.id_num.value, base_page_index)
             base_value = base_page.get_record_int(rid_offset)
             # Unpin the page
-            self.table.base_page_manager.unpin(cur_pr.id_num, base_page_index)
-            self.table.base_page_manager.update_page_usage(cur_pr.id_num, base_page_index)
+            self.table.base_page_manager.unpin(cur_pr.id_num.value, base_page_index)
+            self.table.base_page_manager.update_page_usage(cur_pr.id_num.value, base_page_index)
             if x == INDIRECTION_COLUMN:
                 schema_encoding += str(int(indirection == base_value))
             elif x == RID_COLUMN:
@@ -623,7 +623,7 @@ class Query:
                     # if no space for new page
                     self.table.check_need_evict()
                     # Fetch page from disk
-                    page = self.table.base_page_manager.fetch(cur_pr.id_num, page_index)
+                    page = self.table.base_page_manager.fetch(cur_pr.id_num.value, page_index)
                     self.table.page_ranges[pr_id].base_pages[page_index] = page
                     self.table.size.add(1)
 
@@ -643,16 +643,16 @@ class Query:
                 # if no space for new page
                 self.table.check_need_evict()
                 # Fetch page from disk
-                page = self.table.tail_page_manager.fetch(cur_pr.id_num, page_index)
+                page = self.table.tail_page_manager.fetch(cur_pr.id_num.value, page_index)
                 self.table.page_ranges[pr_id].tail_pages[page_index] = page
                 self.table.size.add(1)
 
             # pin the page
-            self.table.tail_page_manager.pin(cur_pr.id_num, page_index)
+            self.table.tail_page_manager.pin(cur_pr.id_num.value, page_index)
             tail_page_directory.append((page_index, page.num_records))
             # Unin the page
-            self.table.tail_page_manager.unpin(cur_pr.id_num, page_index)
-            self.table.tail_page_manager.update_page_usage(cur_pr.id_num, page_index)
+            self.table.tail_page_manager.unpin(cur_pr.id_num.value, page_index)
+            self.table.tail_page_manager.update_page_usage(cur_pr.id_num.value, page_index)
         # update tail page directory
         # set map of RID -> tail page indexes
         self.table.tail_page_directory[rid] = tail_page_directory
@@ -666,14 +666,14 @@ class Query:
             self.table.check_need_evict()
 
             # Fetch page from disk
-            schema_base_page = self.table.base_page_manager.fetch(cur_pr.id_num, schema_enc_base_page_idx)
+            schema_base_page = self.table.base_page_manager.fetch(cur_pr.id_num.value, schema_enc_base_page_idx)
             self.table.page_ranges[pr_id].base_pages[schema_enc_base_page_idx] = schema_base_page
             self.table.size.add(1)
 
-        self.table.base_page_manager.pin(cur_pr.id_num, schema_enc_base_page_idx)
+        self.table.base_page_manager.pin(cur_pr.id_num.value, schema_enc_base_page_idx)
         last_base_schema_enc = schema_base_page.get_record_int(rid_offset)
-        self.table.base_page_manager.unpin(cur_pr.id_num, schema_enc_base_page_idx)
-        self.table.base_page_manager.update_page_usage(cur_pr.id_num, schema_enc_base_page_idx)
+        self.table.base_page_manager.unpin(cur_pr.id_num.value, schema_enc_base_page_idx)
+        self.table.base_page_manager.update_page_usage(cur_pr.id_num.value, schema_enc_base_page_idx)
 
         new_base_schema_enc = last_base_schema_enc | schema_encoding
         self.table.update_base_rid(INDIRECTION_COLUMN, rid_base, rid)  # indirection
