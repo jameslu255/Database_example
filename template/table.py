@@ -98,7 +98,7 @@ class Table:
 
         # will increment each time we create a new page range (acts as unique ID used to differentiate PR's)
         # also will tell us index of current pr in the pr array
-        self.cur_page_range_id = 0
+        self.cur_page_range_id = AtomicCounter()
         # page range list which stores all the page ranges
         self.page_ranges = []
 
@@ -127,6 +127,9 @@ class Table:
             self.base_rid= self.base_rid.value
         if isinstance(self.tail_rid, AtomicCounter):
             self.tail_rid = self.tail_rid.value
+        if isinstance(self.page_range_id, AtomicCounter):
+            self.page_range_id = self.page_range_id.value
+
 
         # make num_tranactions int
         self.logger.counters_to_int()
@@ -143,6 +146,8 @@ class Table:
             self.base_rid = AtomicCounter(self.base_rid)
         if isinstance(self.tail_rid, int):
             self.tail_rid = AtomicCounter(self.tail_rid)
+        if isinstance(self.page_range_id, int):
+            self.page_range_id = AtomicCounter(self.page_range_id)
 
         # restore num_tranactions
         self.logger.reset_counters()
@@ -481,7 +486,7 @@ class Table:
         self.tail_page_manager.update_page_usage(cur_pr.id_num, len(cur_pr.tail_pages) - 1)
         self.tail_page_manager.set_page_dirty(cur_pr.id_num, len(cur_pr.tail_pages) - 1)
 
-        cur_pr.num_tail_pages += 1
+        cur_pr.num_tail_pages.add(1)
 
     def append_tail_page_record(self, col, value, base_rid):
         # update the page linked to the col
@@ -592,7 +597,7 @@ class Table:
 
     def create_base_page(self, col_name):
         # Get the current page range
-        cur_pr = self.page_ranges[self.cur_page_range_id]
+        cur_pr = self.page_ranges[self.cur_page_range_id.value]
 
        # Check if we have room for the new page
         self.check_need_evict()
@@ -624,7 +629,7 @@ class Table:
         if pr_id >= len(self.page_ranges):  # no new page range
             # make new page range
             # print("making new pange range")
-            self.cur_page_range_id += 1  # this pr is full - update the pr id
+            self.cur_page_range_id.add(1)  # this pr is full - update the pr id
             new_pr = PageRange(self.cur_page_range_id, self.num_columns)
             self.page_ranges.append(new_pr)  # add this new pr with new id to the PR list
             # initialize base pages on new pange range creation
@@ -664,7 +669,7 @@ class Table:
             self.base_page_manager.update_page_usage(pr.id_num, len(pr.base_pages) - 1)
             self.base_page_manager.set_page_dirty(pr.id_num, len(pr.base_pages) - 1)
             # increment the num pages count in either case (full or not full since we are adding a new page)
-            pr.num_base_pages += 1
+            pr.num_base_pages.add(1)
             self.size.add(1)
 
         # Page is dirty
@@ -693,5 +698,5 @@ class Table:
         # need to reassign cur pr in case we created a new PR (should not ref to old one)
         cur_pr = self.page_ranges[self.cur_page_range_id]
         # increment the num pages count in either case (full or not full since we are adding a new page)
-        cur_pr.num_base_pages += 1
+        cur_pr.num_base_pages.add(1)
 
