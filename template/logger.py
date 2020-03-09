@@ -1,5 +1,6 @@
 import os
 import shutil
+import threading
 from template.counter import *
 
 
@@ -21,9 +22,13 @@ LOG_LEVEL = 0
 class Logger:
     """ STATIC VARIABLES """
     num_transactions = AtomicCounter()
-
+    num_readers = 0
+    sem_writer = threading.Semaphore()
+    sem_reader = threading.Semaphore()
+    
     def __init__(self, file_name):
         self.file_name = file_name
+        
         # We will use this variable to save and restore num_transactions since
         # static variables are unserializable
         # Private
@@ -56,15 +61,16 @@ class Logger:
     
     # write the transaction into the file
     def write(self, tid, command, old_val, new_val, bid):
+        # writer requests for critical section
+        self.sem_writer.acquire()
         with open(self.file_name, 'a') as f:
             transaction = str(tid) + " " + str(command) + " " # + str(old_val) + " " + str(new_val) + " " + str(bid) + "\n"
-            print(transaction)
+            # print(transaction)
             for o in old_val:
                 transaction += str(o) + ","
 
             transaction += " "
-
-            print(transaction)
+            # print(transaction)
             for n in new_val:
                 transaction += str(n) + ","
 
@@ -73,10 +79,19 @@ class Logger:
             transaction += str(bid) + "\n"
             f.write(transaction)
             
+            
+            f.write(transaction)
+        # leaves the critical section       
+        self.sem_writer.release()
+            
     def commit(self, tid):
+        # writer requests for critical section
+        self.sem_writer.acquire()
         with open(self.file_name, 'a') as f:
             s = str(tid) + " " + "commited\n"
             f.write(s)
+        # leaves the critical section
+        self.sem_write.release()
         
         # print("tid in looger", tid, Logger.num_transactions.value)
         """
@@ -89,9 +104,13 @@ class Logger:
         """
             
     def abort(self, tid):
+    # writer requests for critical section
+    self.sem_writer.acquire()
         with open(self.file_name, 'a') as f:
             s = str(tid) + " " + "aborted\n"
             f.write(s)
+    # leaves the critical section
+    self.sem_writer.release()
             
         """
         from_file = open(self.file_name)
@@ -102,24 +121,37 @@ class Logger:
         shutil.copyfileobj(from_file,to_file)
         """
     
-    def last_abort(self):
-        # read lines bottom up
-        for line in reversed(list(open(self.file_name))):
-            s = line.rstrip()
-            arg = line.rstrip().split()
-            if arg[1] == "aborted":
-                return arg[0]
+    # def last_abort(self):
+        # # read lines bottom up
+        # for line in reversed(list(open(self.file_name))):
+            # s = line.rstrip()
+            # arg = line.rstrip().split()
+            # if arg[1] == "aborted":
+                # return arg[0]
                 
-        return -1
+        # return -1
                     
-    # read all the transactions from the newest to oldest
-    def read(self):
-        # read lines bottom up
-        for line in reversed(list(open(self.file_name))):
-            print(line.rstrip())
+    # # read all the transactions from the newest to oldest
+    # def read(self):
+        # # read lines bottom up
+        # for line in reversed(list(open(self.file_name))):
+            # print(line.rstrip())
             
     # read all the transactions associated with a transaction id
     def read_tid(self, tid):
+        # Reader wants to enter the critical section
+        self.sem_reader.acquire()
+        # The number of readers has now increased by 1
+        Logger.num_readers += 1
+        # there is atleast one reader in the critical section
+        # this ensure no writer can enter if there is even one reader
+        # thus we give preference to readers here
+        if(Logger.num_readers == 1):
+            self.sem_writer.acquire()
+        # other readers can enter while this current reader is inside 
+        # the critical section
+        self.sem_reader.release()
+            
         transactions = []
         # read lines bottom up
         for line in reversed(list(open(self.file_name))):
@@ -129,26 +161,32 @@ class Logger:
                 if arg[1] != "aborted" and arg[1] != "commited":
                     transactions.append(s)
                     # print(s)
+        self.sem_reader.acquire() # reader ready to leave
+        Logger.num_readers -= 1
+        # that is, no reader is left in the critical section,
+        if(Logger.num_readers == 0):
+            self.sem_writer.release() # writer can enter
+        self.sem_reader.release() # reader leave
         
         return transactions
         
     # read all the transactions associated with these transaction ids
-    def read_tids(self, tids):
-        transactions = []
-        x = 0
-        # read lines bottom up
-        for line in reversed(list(open(self.file_name))):
-            if x >= len(tids):
-                return transactions
+    # def read_tids(self, tids):
+        # transactions = []
+        # x = 0
+        # # read lines bottom up
+        # for line in reversed(list(open(self.file_name))):
+            # if x >= len(tids):
+                # return transactions
                 
-            s = line.rstrip()
-            arg = line.rstrip().split()
-            if arg[0] == str(tids[x]):
-                x += 1
-                transactions.append(s)
-                # print(s)
+            # s = line.rstrip()
+            # arg = line.rstrip().split()
+            # if arg[0] == str(tids[x]):
+                # x += 1
+                # transactions.append(s)
+                # # print(s)
         
-        return transactions
+        # return transactions
 
     def counters_to_int(self):
         # if counter is an AtomicCounter, store int for deserialization
