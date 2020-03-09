@@ -753,11 +753,11 @@ class Query:
             key = int(parsed_line[4])
 
             if query_str == "update":
-                self.update(key, *old_values)     # To undo update: update w/ old values
+                self.update(key, *old_values, tid)     # To undo update: update w/ old values
             elif query_str == "insert":
-                self.delete(*key)                 # To undo insert: delete
+                self.delete(key, tid)                  # To undo insert: delete
             elif query_str == "delete":
-                self.insert(*old_values)          # To undo delete: insert
+                self.insert(*old_values, tid)          # To undo delete: insert
 
     @staticmethod
     def parse_string_array(string):
