@@ -126,7 +126,7 @@ class Query:
     # Return True upon succesful insertion
     # Returns False if insert fails for whatever reason
     """
-    def insert(self, *columns):  
+    def insert(self, *columns, txn_id = 0):  
         didAcquireLock = self.table.lock_manager.acquire(self.table.base_rid + 1, 'W')
         if not didAcquireLock:
             return False
@@ -415,7 +415,7 @@ class Query:
     # Returns False if no records exist with given key or if the target record cannot be accessed due to 2PL locking
     """
 
-    def update(self, key, *columns):
+    def update(self, key, *columns, txn_id = 0):
         didAcquireLock = self.table.lock_manager.acquire(self.table.tail_rid + 1, 'W')
         if not didAcquireLock:
             return False

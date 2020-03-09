@@ -4,6 +4,7 @@ from template.index import *
 from template.bp_manager import *
 from template.counter import *
 from template.lock_manager import *
+from template.logger import *
 import copy
 
 from time import time
@@ -104,6 +105,9 @@ class Table:
         # create our first page range
         self.page_ranges.append(PageRange(self.cur_page_range_id, self.num_columns))
 
+        # Logger object
+        self.logger = Logger("log")
+
         # create pages for the indirection, rid, timestamp, schema encoding column
         self.create_base_page("indirection")    # index 0
         self.create_base_page("rid")            # index 1
@@ -119,6 +123,10 @@ class Table:
         # if counter is an AtomicCounter, convert to int for deserialization
         if isinstance(self.size, AtomicCounter):
             self.size = self.size.value
+
+        # make num_tranactions int
+        self.logger.counters_to_int()
+
         # Convert update counts to int 
         for pr in self.page_ranges:
             pr.make_count_serializable()
@@ -128,11 +136,12 @@ class Table:
         if isinstance(self.size, int):
             self.size = AtomicCounter(self.size)
 
+        # restore num_tranactions
+        self.logger.reset_counters()
+        
         # Convert update counts to AtomicCounter
         for pr in self.page_ranges:
             pr.reset_counter()
-
-
 
     def get_page_range(self, base_rid):
         pr_id = (base_rid // (PAGE_RANGE_MAX_RECORDS + 1))  # given the base_rid we can find the page range we want

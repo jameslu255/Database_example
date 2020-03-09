@@ -49,11 +49,7 @@ class Transaction:
         # undo all the queries of this transaction
         # q = self.logger.read_tid(self.id) # queries that happened already before the abort
         
-        
-        pass
-
     def commit(self):
         print("commiting! Query successful for",self.id)
         # write 'tid commited'
         self.logger.commit(self.id)
-        pass

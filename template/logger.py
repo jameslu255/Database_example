@@ -1,5 +1,7 @@
 import os
 import shutil
+from template.counter import *
+
 
 LOG_LEVEL = 0
 
@@ -17,23 +19,31 @@ LOG_LEVEL = 0
     need not be removed from the database, they can just be marked as deleted.
 """
 class Logger:
+    """ STATIC VARIABLES """
+    num_transactions = AtomicCounter()
+
     def __init__(self, file_name):
         self.file_name = file_name
+        # We will use this variable to save and restore num_transactions since
+        # static variables are unserializable
+        # Private
+        self._saved_num_transactions = 0
         
         # create the file if it DNE, empty it if it does
-        open(file_name, 'a+').close()
+        open(self.file_name, 'a+').close()
         
-        self.num_transactions = 0
         
         # grab the number of transactions in logger rn, else init
+        """
         if os.stat(self.file_name).st_size > 0: #file not empty
             # grab the first line of the file -> number of transactions
             with open(self.file_name,'r') as f:
                 first_line = f.readline().strip()
-                self.num_transactions = int(first_line)
+                num_transactions = AtomicCounter(int(first_line))
         else: # file is empty, set zero for first line
             with open(self.file_name,'a') as f:
                 f.write("0\n")
+        """
           
     def getNumTransaction(self):
         # num = 0
@@ -42,7 +52,7 @@ class Logger:
                     # first_line = f.readline().strip()
                     # num = int(first_line)
         # return num
-        return self.num_transactions
+        return Logger.num_transactions.value
     
     # write the transaction into the file
     def write(self, tid, command, old_val, new_val, bid):
@@ -55,16 +65,17 @@ class Logger:
             s = str(tid) + " " + "commited\n"
             f.write(s)
         
-        
         # update num transaction count on top of file
-        self.num_transactions += 1
-        print("tid in looger", tid, self.num_transactions)
+        Logger.num_transactions.add(1)
+        print("tid in looger", tid, num_transactions)
+        """
         from_file = open(self.file_name)
         l = from_file.readline()
-        l = str(self.num_transactions) + "\n"
+        l = str(num_transactions) + "\n"
         to_file   = open(self.file_name,mode='w')
         to_file.write(l)
         shutil.copyfileobj(from_file,to_file)
+        """
             
     def abort(self, tid):
         with open(self.file_name, 'a') as f:
@@ -72,13 +83,15 @@ class Logger:
             f.write(s)
             
         # update num transaction count on top of file
-        self.num_transactions += 1
+        Logger.num_transactions.add(1)
+        """
         from_file = open(self.file_name)
         l = from_file.readline()
-        l = str(self.num_transactions) + "\n"
+        l = str(num_transactions) + "\n"
         to_file   = open(self.file_name,mode='w')
         to_file.write(l)
         shutil.copyfileobj(from_file,to_file)
+        """
         
     # read all the transactions from the newest to oldest
     def read(self):
@@ -116,3 +129,14 @@ class Logger:
                 print(s)
         
         return transactions
+
+    def counters_to_int(self):
+        # if counter is an AtomicCounter, store int for deserialization
+        if isinstance(Logger.num_transactions, AtomicCounter):
+            self._saved_num_transactions = Logger.num_transactions.value
+            Logger.num_transactions = None
+
+    def reset_counters(self):
+        # if counter is an int, convert to AtomicCounter during deserialization
+        if isinstance(self._saved_num_transactions, int):
+            self._saved_num_transactions = AtomicCounter(Logger.num_transactions)
