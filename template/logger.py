@@ -62,7 +62,7 @@ class Logger:
     # write the transaction into the file
     def write(self, tid, command, old_val, new_val, bid):
         # writer requests for critical section
-        self.sem_writer.acquire()
+        sem_writer.acquire()
         with open(self.file_name, 'a') as f:
             transaction = str(tid) + " " + str(command) + " " # + str(old_val) + " " + str(new_val) + " " + str(bid) + "\n"
             # print(transaction)
@@ -82,16 +82,16 @@ class Logger:
             
             f.write(transaction)
         # leaves the critical section       
-        self.sem_writer.release()
+       sem_writer.release()
             
     def commit(self, tid):
         # writer requests for critical section
-        self.sem_writer.acquire()
+        sem_writer.acquire()
         with open(self.file_name, 'a') as f:
             s = str(tid) + " " + "commited\n"
             f.write(s)
         # leaves the critical section
-        self.sem_write.release()
+        sem_write.release()
         
         # print("tid in looger", tid, Logger.num_transactions.value)
         """
@@ -105,12 +105,12 @@ class Logger:
             
     def abort(self, tid):
     # writer requests for critical section
-    self.sem_writer.acquire()
+    sem_writer.acquire()
         with open(self.file_name, 'a') as f:
             s = str(tid) + " " + "aborted\n"
             f.write(s)
     # leaves the critical section
-    self.sem_writer.release()
+    sem_writer.release()
             
         """
         from_file = open(self.file_name)
@@ -140,17 +140,17 @@ class Logger:
     # read all the transactions associated with a transaction id
     def read_tid(self, tid):
         # Reader wants to enter the critical section
-        self.sem_reader.acquire()
+        sem_reader.acquire()
         # The number of readers has now increased by 1
         Logger.num_readers += 1
         # there is atleast one reader in the critical section
         # this ensure no writer can enter if there is even one reader
         # thus we give preference to readers here
         if(Logger.num_readers == 1):
-            self.sem_writer.acquire()
+            sem_writer.acquire()
         # other readers can enter while this current reader is inside 
         # the critical section
-        self.sem_reader.release()
+        sem_reader.release()
             
         transactions = []
         # read lines bottom up
@@ -161,12 +161,12 @@ class Logger:
                 if arg[1] != "aborted" and arg[1] != "commited":
                     transactions.append(s)
                     # print(s)
-        self.sem_reader.acquire() # reader ready to leave
+        sem_reader.acquire() # reader ready to leave
         Logger.num_readers -= 1
         # that is, no reader is left in the critical section,
         if(Logger.num_readers == 0):
-            self.sem_writer.release() # writer can enter
-        self.sem_reader.release() # reader leave
+            sem_writer.release() # writer can enter
+        sem_reader.release() # reader leave
         
         return transactions
         
