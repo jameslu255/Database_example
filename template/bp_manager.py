@@ -55,14 +55,12 @@ class BufferPoolManager:
             self.dirty_pages.add(page_num)
 
     def is_page_dirty(self, page_num):
-        with self._dirty_pages_lock:
-            return page_num in self.dirty_pages
+        return page_num in self.dirty_pages
 
     def get_num_pins(self, page_num):
-        with self._pinned_pages_lock:
-            if page_num not in self.pinned_pages:
-                return 0
-            return self.pinned_pages[page_num]
+        if page_num not in self.pinned_pages:
+            return 0
+        return self.pinned_pages[page_num]
 
     def write_back(self, pages, page_num, pr_id): 
         with self._dirty_pages_lock:
@@ -132,23 +130,25 @@ class BufferPoolManager:
         """
         # Find a page to evict. Note that this will remove the page from the
         # cache 
-        page_pair = self.lru_pages.find_lru()
-        if page_pair == None: 
-            # print("Could not find page to evict")
-            return None
+        with self._lru_lock:
+            page_pair = self.lru_pages.find_lru()
 
-        return page_pair
+            if page_pair == None: 
+                # print("Could not find page to evict")
+                return None
+
+            return page_pair
 
     def fetch(self, pr_id, page_num):
         # This gives us the disk page range number
         page_num = (pr_id * self.num_columns) + page_num
         # We assume that if the page is neitehr in the bufferpool
         # nor disk, it's probably an empty page
-        if page_num not in self.disk_location:
-            print(f"Page {page_num} not in disk")
-            return Page()
-
         with self._f_lock:
+            if page_num not in self.disk_location:
+                print(f"Page {page_num} not in disk")
+                return Page()
+
             # Read binary mode. + is necessary for mmap to work
             with open(self.filename, "r+b") as f:
                 # BEGIN READ
