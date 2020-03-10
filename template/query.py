@@ -45,7 +45,7 @@ class Query:
 
         for base_rid in rids:
             didAcquireLock = self.table.lock_manager.acquire(base_rid, 'W')
-            if not didAcquireLock:
+            if not didAcquireLock and abort == False:
                 self.abort(txn_id)
                 return False
 
@@ -139,7 +139,7 @@ class Query:
         self.table.base_rid.add(1)
         rid = self.table.base_rid.value
         didAcquireLock = self.table.lock_manager.acquire(rid, 'W')
-        if not didAcquireLock:
+        if not didAcquireLock and abort == False:
             self.abort(txn_id)
             return False
 
@@ -214,7 +214,7 @@ class Query:
             if (rid == "F"):
                 return []
             didAcquireLock = self.table.lock_manager.acquire(rid, 'R')
-            if not didAcquireLock:
+            if not didAcquireLock and abort == False:
                 self.abort(txn_id)
                 return False
             # Find Page Range ID
@@ -442,7 +442,7 @@ class Query:
 
         rid_base = self.table.keys[key]  # rid of base page with key
         didAcquireLock = self.table.lock_manager.acquire(rid_base, 'W')
-        if not didAcquireLock:
+        if not didAcquireLock and abort == False:
             self.abort(txn_id)
             return False
 
