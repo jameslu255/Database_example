@@ -29,6 +29,9 @@ class PageRange:
             self.num_base_pages = self.num_base_pages.value
         if isinstance(self.num_tail_pages, AtomicCounter):
             self.num_tail_pages = self.num_tail_pages.value
+        if isinstance(self.id_num, AtomicCounter):
+            self.id_num = self.id_num.value
+
 
     def reset_counter(self):
         # if counter is an int, convert to AtomicCounter during deserialization
@@ -38,3 +41,6 @@ class PageRange:
             self.num_base_pages = AtomicCounter(self.num_base_pages)
         if isinstance(self.num_tail_pages, int):
             self.num_tail_pages = AtomicCounter(self.num_tail_pages)
+        if isinstance(self.id_num, int):
+            self.id_num = AtomicCounter(self.id_num)
+

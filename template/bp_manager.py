@@ -1,7 +1,6 @@
 from template.table import *
 from template.page import *
 from template.page_range import *
-from template.rw_lock import *
 import mmap
 import collections
 
@@ -10,11 +9,19 @@ class LRUCache:
     def __init__(self):
         self.cache = collections.OrderedDict()
 
-    def set(self, key, val):
+    def erase(self, key):
         try:
             self.cache.pop(key)
         except KeyError:
             pass
+
+    def get(self, key):
+        if key in self.cache:
+            return self.cache[key]
+        return None
+
+    def set(self, key, val):
+        self.erase(key)
         self.cache[key] = val
 
     def find_lru(self):
@@ -55,22 +62,16 @@ class BufferPoolManager:
             self.dirty_pages.add(page_num)
 
     def is_page_dirty(self, page_num):
-        return page_num in self.dirty_pages
+        with self._dirty_pages_lock:
+            return page_num in self.dirty_pages
 
     def get_num_pins(self, page_num):
-        if page_num not in self.pinned_pages:
-            return 0
-        return self.pinned_pages[page_num]
+        with self._pinned_pages_lock:
+            if page_num not in self.pinned_pages:
+                return 0
+            return self.pinned_pages[page_num]
 
     def write_back(self, pages, page_num, pr_id): 
-        with self._dirty_pages_lock:
-            if not self.is_page_dirty(page_num):
-                return False 
-
-        with self._pinned_pages_lock:
-            if not self.get_num_pins(page_num) > 0:
-                return False 
-
         # Find the index of the page relative to the page range
         # in the bufferpool
         page_relative_idx = page_num - (pr_id * self.num_columns) 
@@ -111,11 +112,9 @@ class BufferPoolManager:
                     # Store the offsets of the page 
                     self.disk_location[page_num] = (start, end)
         
-
         with self._dirty_pages_lock:
             self.dirty_pages.remove(page_num)
 
-        return True
         
     def update_page_usage(self, pr_id, page_num):
         # Transform the page number to increase with the page range
@@ -137,6 +136,18 @@ class BufferPoolManager:
                 # print("Could not find page to evict")
                 return None
 
+            # We can't evict this page
+            if not self.is_page_dirty(page_pair[0]) or self.get_num_pins(page_pair[0]) > 0:
+                # Put the pair to the end of our cache
+                self.lru_pages.set(page_pair[0], page_pair[1])
+                page_pair = None
+                for dirty_page_num in self.dirty_pages:
+                    pr_id = self.lru_pages.get(dirty_page_num)
+                    if pr_id != None and self.get_num_pins(dirty_page_num) == 0:
+                        page_pair = (dirty_page_num, pr_id)
+                        self.lru_pages.erase(dirty_page_num)
+                        break
+
             return page_pair
 
     def fetch(self, pr_id, page_num):
@@ -151,8 +162,6 @@ class BufferPoolManager:
 
             # Read binary mode. + is necessary for mmap to work
             with open(self.filename, "r+b") as f:
-                # BEGIN READ
-                self._rw_lock.begin_read()
                 # Map the file to memory
                 mm = mmap.mmap(f.fileno(), 0)
                 # Get the starting and ending positions of the page

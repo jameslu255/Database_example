@@ -84,7 +84,7 @@ class Table:
         self.tail_rid = AtomicCounter()
 
         # Aim for 20 * num records or else things will be too slow
-        self.capacity = 2**64 - 1
+        self.capacity = 20000
         # bufferpool size
         self.size = AtomicCounter()
 
@@ -129,12 +129,11 @@ class Table:
         if isinstance(self.size, AtomicCounter):
             self.size = self.size.value
         if isinstance(self.base_rid, AtomicCounter):
-            self.base_rid= self.base_rid.value
+            self.base_rid = self.base_rid.value
         if isinstance(self.tail_rid, AtomicCounter):
             self.tail_rid = self.tail_rid.value
-        if isinstance(self.page_range_id, AtomicCounter):
-            self.page_range_id = self.page_range_id.value
-
+        if isinstance(self.cur_page_range_id, AtomicCounter):
+            self.cur_page_range_id = self.cur_page_range_id.value
 
         # make num_tranactions int
         self.logger.counters_to_int()
@@ -142,6 +141,11 @@ class Table:
         # Convert update counts to int 
         for pr in self.page_ranges:
             pr.make_count_serializable()
+
+        # Remove the locks from memory
+        self.tail_page_lock = None
+        self.base_page_lock = None
+        self.page_range_lock = None
 
     def reset_counters(self):
         # if counter is an int, convert to AtomicCounter during deserialization
@@ -151,8 +155,8 @@ class Table:
             self.base_rid = AtomicCounter(self.base_rid)
         if isinstance(self.tail_rid, int):
             self.tail_rid = AtomicCounter(self.tail_rid)
-        if isinstance(self.page_range_id, int):
-            self.page_range_id = AtomicCounter(self.page_range_id)
+        if isinstance(self.cur_page_range_id, int):
+            self.cur_page_range_id = AtomicCounter(self.cur_page_range_id)
 
         # restore num_tranactions
         self.logger.reset_counters()
@@ -160,6 +164,11 @@ class Table:
         # Convert update counts to AtomicCounter
         for pr in self.page_ranges:
             pr.reset_counter()
+        
+        # reinsantiate the locks
+        self.tail_page_lock = threading.Lock()
+        self.base_page_lock = threading.Lock()
+        self.page_range_lock = threading.Lock()
 
     def get_page_range(self, base_rid):
         pr_id = (base_rid // (PAGE_RANGE_MAX_RECORDS + 1))  # given the base_rid we can find the page range we want
@@ -271,13 +280,14 @@ class Table:
         # 0 -> Disk Page Number
         # 1 -> Page Range ID
         if evictPair != None:
+            with self.tail_page_lock:
             # Write the tail page to disk if possible
-            self.tail_page_manager.write_back(self.page_ranges[evictPair[1]].tail_pages,
-            evictPair[0], evictPair[1])
-            # Convert from disk page number to bufferpool page number
-            page_num = evictPair[0] - (evictPair[1] * self.tail_page_manager.num_columns)
-            # Remove the page from the bufferpool
-            self.page_ranges[evictPair[1]].tail_pages[page_num] = None
+                self.tail_page_manager.write_back(self.page_ranges[evictPair[1]].tail_pages,
+                evictPair[0], evictPair[1])
+                # Convert from disk page number to bufferpool page number
+                page_num = evictPair[0] - (evictPair[1] * self.tail_page_manager.num_columns)
+                # Remove the page from the bufferpool
+                self.page_ranges[evictPair[1]].tail_pages[page_num] = None
             # Decrement number of pages in the bufferpool
             self.size.add(-1)
             return True
@@ -293,13 +303,14 @@ class Table:
         # 1 -> Page Range ID
         if evictPair != None:
             # Write the tail page to disk if possible
-            self.base_page_manager.write_back(self.page_ranges[evictPair[1]].base_pages,
+            with self.base_page_lock:
+                self.base_page_manager.write_back(self.page_ranges[evictPair[1]].base_pages,
             evictPair[0], evictPair[1])
-            # Convert from disk page number to bufferpool page number
-            page_num = evictPair[0] - (evictPair[1] * self.base_page_manager.num_columns)
-            # Remove the page from the bufferpool
-            self.page_ranges[evictPair[1]].base_pages[page_num] = None
-            # Decrement number of pages in the bufferpool
+                # Convert from disk page number to bufferpool page number
+                page_num = evictPair[0] - (evictPair[1] * self.base_page_manager.num_columns)
+                # Remove the page from the bufferpool
+                self.page_ranges[evictPair[1]].base_pages[page_num] = None
+                # Decrement number of pages in the bufferpool
             self.size.add(-1)
             return True
         return False
@@ -310,6 +321,7 @@ class Table:
         a = self.evict_base_page()
         b = self.evict_tail_page()
         assert(a or b), "Cannot evict anything"
+
     # call example: self.replace(i, base_pages_copy, TPS_COLUMN, new_tps)
     def replace(self, pr_id, rid, base_pages, column_index, value):
         base_page = base_pages[column_index]
@@ -705,7 +717,7 @@ class Table:
         # print("current page before cap check range id: " + str(self.cur_page_range_id))
         if not cur_pr.page_range_has_capacity():
             # self.actual_page_directory.append(cur_pr.end_rid_base)      # store the max rid into the array
-            self.cur_page_range_id += 1  # this pr is full - update the pr id
+            self.cur_page_range_id.add(1)  # this pr is full - update the pr id
             with self.page_range_lock:
                 self.page_ranges.append(
                     PageRange(self.cur_page_range_id, self.num_columns))  # add this new pr with new id to the PR list

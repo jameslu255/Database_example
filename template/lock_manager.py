@@ -50,6 +50,7 @@ class LockManager:
     def clear_locks(self):
         # remove all locks for serialization
         self.exclusive_locks.clear()
+        self._rw_lock.clear_locks()
         self._rw_lock = None
 
     def reset_lock(self):
