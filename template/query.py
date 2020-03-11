@@ -662,3 +662,12 @@ class Query:
             # print(f"count: {count}\n")
         return count
         pass
+
+    def increment(self, key, column, txn_id=0):
+        r = self.select(key, self.table.key, [1] * self.table.num_columns)[0]
+        if r is not False:
+            updated_columns = [None] * self.table.num_columns
+            updated_columns[column] = r.columns[column] + 1
+            u = self.update(key, *updated_columns)
+            return u
+        return False
