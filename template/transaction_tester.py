@@ -20,6 +20,11 @@ KEY = "key"
 G1 = "G1"
 G2 = "G2"
 
+def print_header_line(count):
+    for j in range(count):
+        print("_", end='')
+    print()
+
 
 db = Database()
 db.open('ECS165')
@@ -107,6 +112,58 @@ for (i, y) in enumerate(grades_table.page_ranges):
     print()
 # ----------------------------------------------------------------------------------------------------
 
+# # -------------------- Print Table --------------------
+for (i, y) in enumerate(grades_table.page_ranges):
+    print_header_line(104)
+    page_range_header = PAGE_RANGE + str(y.id_num)
+    print(page_range_header.center(100, ' '))
+    print_header_line(104)
+    print(BASE_PAGES.center(104, ' '))
+    print(INDIRECTION.center(12, ' '), end='|')
+    print(RID.center(12, ' '), end='|')
+    print(TIME.center(12, ' '), end='|')
+    print(SCHEMA.center(12, ' '), end='|')
+    print(TPS.center(12, ' '), end='|')
+    print(KEY.center(12, ' '), end='|')
+    print(G1.center(12, ' '), end='|')
+    print(G2.center(12, ' '), end='|')
+    print()
+    for x in range(y.base_pages[0].num_records):
+        for (page_num, page) in enumerate(y.base_pages):
+            byte_val = page.data[x*8:(x*8 + 8)]
+            val = int.from_bytes(byte_val, "big")
+            print(str(val).center(12, ' '), end='|')
+        print()
+#
+    num_tail_pages = len(y.tail_pages)
+    num_tail_page_sets = int(num_tail_pages / (grades_table.num_columns + 5))
+    tail_page_set_start = 0
+    tail_page_set_end = 4 + grades_table.num_columns + 1
+    for n in range(num_tail_page_sets):
+        tail_page_header = TAIL_PAGE + str(n)
+        print(tail_page_header.center(104, ' '))
+        print(INDIRECTION.center(12, ' '), end='|')
+        print(RID.center(12, ' '), end='|')
+        print(TIME.center(12, ' '), end='|')
+        print(SCHEMA.center(12, ' '), end='|')
+        print(BASE_RID.center(12, ' '), end='|')
+        print(KEY.center(12, ' '), end='|')
+        print(G1.center(12, ' '), end='|')
+        print(G2.center(12, ' '), end='|')
+        print()
+        current_tail_page = y.tail_pages[tail_page_set_start]
+        for x in range(current_tail_page.num_records):
+            for (page_num, page) in enumerate(y.tail_pages[tail_page_set_start:tail_page_set_end]):
+                byte_val = page.data[x * 8:(x * 8 + 8)]
+                val = int.from_bytes(byte_val, "big")
+                print(str(val).center(12, ' '), end='|')
+                # if page_num == tail_page_set_end:
+                #     break
+            print()
+        tail_page_set_start += 4 + grades_table.num_columns + 1
+        tail_page_set_end += 4 + grades_table.num_columns + 1
+    print_header_line(104)
+# # ----------------------------------------------------------------------------------------------------
 if s != num_committed_transactions * 5:
     print('Expected sum:', num_committed_transactions * 5, ', actual:', s, '. Failed.')
 else:
