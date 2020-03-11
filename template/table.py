@@ -98,6 +98,7 @@ class Table:
         self.lock_manager = LockManager()
 
         self.page_range_lock = threading.Lock()
+        self.r_lock  = threading.Lock()
 
         # will increment each time we create a new page range (acts as unique ID used to differentiate PR's)
         # also will tell us index of current pr in the pr array
@@ -142,6 +143,8 @@ class Table:
 
         # Remove the locks from memory
         self.page_range_lock = None
+        self.r_lock = None
+
 
     def reset_counters(self):
         # if counter is an int, convert to AtomicCounter during deserialization
@@ -163,6 +166,8 @@ class Table:
         
         # reinsantiate the locks
         self.page_range_lock = threading.Lock()
+        self.r_lock  = threading.Lock()
+
 
     def get_page_range(self, base_rid):
         pr_id = (base_rid // (PAGE_RANGE_MAX_RECORDS + 1))  # given the base_rid we can find the page range we want
@@ -329,7 +334,8 @@ class Table:
             # Fetch the page from disk
             base_page = self.base_page_manager.fetch(pr_id, INDIRECTION_COLUMN)
             base_pages[column_index] = base_page
-        base_page.set_record(rid, value)
+        with self.r_lock:
+            base_page.set_record(rid, value)
 
 
     # Change so that don't start at very bottom, but rather start at merge point
@@ -578,7 +584,8 @@ class Table:
         # Page is dirty
         self.tail_page_manager.set_page_dirty(cur_pr.id_num.value, column_index)
         # Update the page
-        cur_page.set_record(rid, value)
+        with self.r_lock:
+            cur_page.set_record(rid, value)
         # Unpin the current Page
         self.tail_page_manager.unpin(cur_pr.id_num.value, column_index)
 
@@ -610,7 +617,8 @@ class Table:
         # Get the record's offset
         base_offset = rid - (PAGE_RANGE_MAX_RECORDS * pr_id)
         # Set the record's value
-        cur_page.set_record(base_offset, value)
+        with self.r_lock:
+            cur_page.set_record(base_offset, value)
 
     def create_base_page(self, col_name):
         # Get the current page range

@@ -176,15 +176,16 @@ class Query:
         # pr_id = rid_base // (max_page_size / 8)
         pr_id = rid // (PAGE_RANGE_MAX_RECORDS + 1)
         # print("pr_id", pr_id)
-        cur_pr = self.table.page_ranges[pr_id]
+        with self.table.page_range_lock:
+            cur_pr = self.table.page_ranges[pr_id]
 
-        # SID -> RID
-        self.table.keys[key] = rid
-        # RID -> page_index
-        for x in range(len(columns) + NUM_CONSTANT_COLUMNS):
-            # page_directory_indexes.append(self.table.free_base_pages[x])
-            page_directory_indexes.append(cur_pr.free_base_pages[x])
-        self.table.base_page_directory[rid] = page_directory_indexes
+            # SID -> RID
+            self.table.keys[key] = rid
+            # RID -> page_index
+            for x in range(len(columns) + NUM_CONSTANT_COLUMNS):
+                # page_directory_indexes.append(self.table.free_base_pages[x])
+                page_directory_indexes.append(cur_pr.free_base_pages[x])
+            self.table.base_page_directory[rid] = page_directory_indexes
 
         self.table.lock_manager.release(rid, 'W')
         if (txn_id > 0):
@@ -225,16 +226,17 @@ class Query:
                 return False
             # Find Page Range ID
             pr_id = rid // (PAGE_RANGE_MAX_RECORDS + 1)
-            page_range = self.table.page_ranges[pr_id]
-
-            # get relative rid to new page range since it starts at 0
-            offset = rid - (PAGE_RANGE_MAX_RECORDS * pr_id)
-
-            # Find physical pages' indices for RID from page_directory [RID:[x x x x x]]
-            base_page_indices = self.table.base_page_directory[rid]
-            # print(f"Found base pages: {base_page_indices}")
 
             with self.table.page_range_lock:
+                page_range = self.table.page_ranges[pr_id]
+
+                # get relative rid to new page range since it starts at 0
+                offset = rid - (PAGE_RANGE_MAX_RECORDS * pr_id)
+
+                # Find physical pages' indices for RID from page_directory [RID:[x x x x x]]
+                base_page_indices = self.table.base_page_directory[rid]
+                # print(f"Found base pages: {base_page_indices}")
+
                 # Get and check indirection
                 indirection_page_index = base_page_indices[INDIRECTION_COLUMN]
                 indirection_page = page_range.base_pages[indirection_page_index]
@@ -476,7 +478,8 @@ class Query:
 
         # Get current page range
         pr_id = rid_base // (PAGE_RANGE_MAX_RECORDS + 1)
-        cur_pr = self.table.page_ranges[pr_id]
+        with self.table.page_range_lock:
+            cur_pr = self.table.page_ranges[pr_id]
 
         # Get relative rid to new page range since it starts at 0
         rid_offset = rid_base - (PAGE_RANGE_MAX_RECORDS * pr_id)
@@ -512,9 +515,9 @@ class Query:
                 # Unpin the page
                 self.table.tail_page_manager.unpin(cur_pr.id_num.value, page_index)
                 self.table.tail_page_manager.update_page_usage(cur_pr.id_num.value, page_index)
-            # tail_page_directory.append(self.table.free_tail_pages[x])
-            # update tail page directory
-            self.table.tail_page_directory[rid] = tail_page_directory
+                # tail_page_directory.append(self.table.free_tail_pages[x])
+                # update tail page directory
+                self.table.tail_page_directory[rid] = tail_page_directory
 
             cur_pr.update_count.add(5 + self.table.num_columns)
         # Already initialized tail pages
@@ -740,8 +743,9 @@ class Query:
         num_columns = 5 + self.table.num_columns  # number of columns in this table
         num_total_tail_pages = tail_page_sets * num_columns  # gives us what to mod by
 
-        if (cur_pr.update_count.value > 0) and (cur_pr.num_tail_pages.value % num_total_tail_pages == 0):
-            self.table.merge(cur_pr)
+        # if (cur_pr.update_count.value > 0) and (cur_pr.num_tail_pages.value % num_total_tail_pages == 0):
+        #     with self.table.page_range_lock:
+        #         self.table.merge(cur_pr)
 
         self.table.lock_manager.release(rid_base, 'W')
 
