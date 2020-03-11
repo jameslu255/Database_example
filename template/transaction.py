@@ -13,6 +13,7 @@ class Transaction:
         self.logger = Logger("log")
         # update num transaction count on top of file
         Logger.num_transactions.add(1)
+        
         self.id = self.logger.getNumTransaction()
         
         print("this is transaction #",self.id)
@@ -35,7 +36,8 @@ class Transaction:
     def run(self):
         for query, args in self.queries:
             query_type = str(query.__name__)
-            print(query_type)
+            # print(query_type)
+
             result = query(*args, txn_id = self.id)
             # If the query has failed the transaction should abort
             if result == False:
@@ -44,13 +46,21 @@ class Transaction:
 
 
     def abort(self):
-        print("aborting! Query failed for", self.id)
+        # print("aborting! Query failed for", self.id)
         # write 'tid aborted'
         self.logger.abort(self.id)
+        # q = self.logger.read_tid(self.id)
+        # print("results")
+        # print(q)
         # undo all the queries of this transaction
         # q = self.logger.read_tid(self.id) # queries that happened already before the abort
+        self.queries = []
+
+        return False
         
     def commit(self):
-        print("commiting! Query successful for",self.id)
+        # print("commiting! Query successful for",self.id)
         # write 'tid commited'
         self.logger.commit(self.id)
+
+        return True

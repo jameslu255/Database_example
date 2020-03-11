@@ -2,6 +2,7 @@ from template.db import Database
 from template.query import Query
 from template.transaction import Transaction
 from template.transaction_worker import TransactionWorker
+import threading
 
 from random import choice, randint, sample, seed
 
@@ -30,7 +31,7 @@ for i in range(num_threads):
     transaction_workers.append(TransactionWorker())
 
 for i in range(10000):
-    key = random.choice(keys)
+    key = choice(keys)
     record = records[key]
     c = record[1]
     transaction = Transaction()
@@ -44,7 +45,7 @@ for i in range(10000):
 
 threads = []
 for transaction_worker in transaction_workers:
-    threads.append(threading.Thread(transaction_worker.run, args = ()))
+    threads.append(threading.Thread(target=transaction_worker.run, args = ()))
 
 for thread in threads:
     thread.start()
