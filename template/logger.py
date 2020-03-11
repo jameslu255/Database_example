@@ -135,4 +135,4 @@ class Logger:
     def reset_counters(self):
         # if counter is an int, convert to AtomicCounter during deserialization
         if isinstance(self._saved_num_transactions, int):
-            self._saved_num_transactions = AtomicCounter(Logger.num_transactions)
+            Logger.num_transactions = AtomicCounter(self._saved_num_transactions)
