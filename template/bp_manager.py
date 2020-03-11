@@ -75,6 +75,12 @@ class BufferPoolManager:
         # Find the index of the page relative to the page range
         # in the bufferpool
         page_relative_idx = page_num - (pr_id * self.num_columns) 
+        if (page_relative_idx >= len(pages) or pages[page_relative_idx] == None):
+            return
+
+        with self._dirty_pages_lock:
+            if page_num in self.dirty_pages:
+                self.dirty_pages.remove(page_num)
 
         with self._f_lock:
             # We have written this page to disk before 
@@ -112,8 +118,6 @@ class BufferPoolManager:
                     # Store the offsets of the page 
                     self.disk_location[page_num] = (start, end)
         
-        with self._dirty_pages_lock:
-            self.dirty_pages.remove(page_num)
 
         
     def update_page_usage(self, pr_id, page_num):
@@ -141,12 +145,14 @@ class BufferPoolManager:
                 # Put the pair to the end of our cache
                 self.lru_pages.set(page_pair[0], page_pair[1])
                 page_pair = None
-                for dirty_page_num in self.dirty_pages:
-                    pr_id = self.lru_pages.get(dirty_page_num)
-                    if pr_id != None and self.get_num_pins(dirty_page_num) == 0:
-                        page_pair = (dirty_page_num, pr_id)
-                        self.lru_pages.erase(dirty_page_num)
-                        break
+                
+                with self._dirty_pages_lock:
+                    for dirty_page_num in self.dirty_pages:
+                        pr_id = self.lru_pages.get(dirty_page_num)
+                        if pr_id != None and self.get_num_pins(dirty_page_num) == 0:
+                            page_pair = (dirty_page_num, pr_id)
+                            self.lru_pages.erase(dirty_page_num)
+                            break
 
             return page_pair
 

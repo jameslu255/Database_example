@@ -280,14 +280,17 @@ class Table:
         # 0 -> Disk Page Number
         # 1 -> Page Range ID
         if evictPair != None:
-            with self.tail_page_lock:
-            # Write the tail page to disk if possible
-                self.tail_page_manager.write_back(self.page_ranges[evictPair[1]].tail_pages,
-                evictPair[0], evictPair[1])
-                # Convert from disk page number to bufferpool page number
-                page_num = evictPair[0] - (evictPair[1] * self.tail_page_manager.num_columns)
-                # Remove the page from the bufferpool
-                self.page_ranges[evictPair[1]].tail_pages[page_num] = None
+        # Write the tail page to disk if possible
+            if evictPair[1] >= len(self.page_ranges):
+                return False
+            self.tail_page_manager.write_back(self.page_ranges[evictPair[1]].tail_pages,
+            evictPair[0], evictPair[1])
+            # Convert from disk page number to bufferpool page number
+            page_num = evictPair[0] - (evictPair[1] * self.tail_page_manager.num_columns)
+            # Remove the page from the bufferpool
+            if page_num >= len(self.page_ranges[evictPair[1]].tail_pages):
+                return False
+            self.page_ranges[evictPair[1]].tail_pages[page_num] = None
             # Decrement number of pages in the bufferpool
             self.size.add(-1)
             return True
@@ -303,14 +306,17 @@ class Table:
         # 1 -> Page Range ID
         if evictPair != None:
             # Write the tail page to disk if possible
-            with self.base_page_lock:
-                self.base_page_manager.write_back(self.page_ranges[evictPair[1]].base_pages,
-            evictPair[0], evictPair[1])
-                # Convert from disk page number to bufferpool page number
-                page_num = evictPair[0] - (evictPair[1] * self.base_page_manager.num_columns)
-                # Remove the page from the bufferpool
-                self.page_ranges[evictPair[1]].base_pages[page_num] = None
-                # Decrement number of pages in the bufferpool
+            if evictPair[1] >= len(self.page_ranges):
+                return False
+            self.base_page_manager.write_back(self.page_ranges[evictPair[1]].base_pages,
+        evictPair[0], evictPair[1])
+            # Convert from disk page number to bufferpool page number
+            page_num = evictPair[0] - (evictPair[1] * self.base_page_manager.num_columns)
+            # Remove the page from the bufferpool
+            if page_num >= len(self.page_ranges[evictPair[1]].base_pages):
+                return False
+            self.page_ranges[evictPair[1]].base_pages[page_num] = None
+            # Decrement number of pages in the bufferpool
             self.size.add(-1)
             return True
         return False
@@ -510,27 +516,27 @@ class Table:
     def append_tail_page_record(self, col, value, base_rid):
         # update the page linked to the col
         # print(str(col) + " writing val: " + str(value) + " of type " + str(type(value)))
-        cur_pr = self.get_page_range(base_rid)
-        index_relative = cur_pr.free_tail_pages[col]
-        # index_relative = self.free_tail_pages[col]
-        cur_page = cur_pr.tail_pages[index_relative]
-        # If page isn't in bufferpool
-        if cur_page == None:
-            # If we don't have enough space to bring in another page
-            self.check_need_evict()
+        with self.page_range_lock:
+            cur_pr = self.get_page_range(base_rid)
 
-            # Fetch the page from disk
-            cur_page = self.tail_page_manager.fetch(cur_pr.id_num.value, index_relative)
-            with self.tail_page_lock:
+        with self.tail_page_lock:
+            index_relative = cur_pr.free_tail_pages[col]
+            # index_relative = self.free_tail_pages[col]
+            cur_page = cur_pr.tail_pages[index_relative]
+            # If page isn't in bufferpool
+            if cur_page == None:
+                # If we don't have enough space to bring in another page
+                self.check_need_evict()
+
+                # Fetch the page from disk
+                cur_page = self.tail_page_manager.fetch(cur_pr.id_num.value, index_relative)
                 self.page_ranges[cur_pr.id_num.value].tail_pages[index_relative] = cur_page
-            self.size.add(1)
+                self.size.add(1)
 
         # Pin the current Page
         self.tail_page_manager.pin(cur_pr.id_num.value, index_relative)
         error = cur_page.write(value)
         if error == -1:  # maximum size reached in page
-            # Check if we have room for the new page
-            self.check_need_evict()
             # create new page
             page = Page()
             self.size.add(1)
@@ -539,6 +545,8 @@ class Table:
             page.write(value)
             # append the new page
             with self.tail_page_lock:
+                # Check if we have room for the new page
+                self.check_need_evict()
                 cur_pr.tail_pages.append(page)
                 # pagerangenum * num_cols + page
                 # add this tail page to the page range's tail list
@@ -561,19 +569,20 @@ class Table:
 
     def update_tail_rid(self, column_index, rid, value, base_rid):
         pr_id = base_rid // (PAGE_RANGE_MAX_RECORDS + 1)
-        cur_pr = self.page_ranges[pr_id]
-        cur_page = cur_pr.tail_pages[column_index]
+        with self.page_range_lock:
+            cur_pr = self.page_ranges[pr_id]
 
-        # If page isn't in bufferpool
-        if cur_page == None:
-            # If we don't have enough space to bring in another page
-            self.check_need_evict()
+        with self.tail_page_lock:
+            cur_page = cur_pr.tail_pages[column_index]
+            # If page isn't in bufferpool
+            if cur_page == None:
+                # If we don't have enough space to bring in another page
+                self.check_need_evict()
 
-            cur_page = self.tail_page_manager.fetch(cur_pr.id_num.value,
-                                                    column_index)
-            with self.tail_page_lock:
+                cur_page = self.tail_page_manager.fetch(cur_pr.id_num.value,
+                                                        column_index)
                 self.page_ranges[pr_id].tail_pages[column_index] = cur_page
-            self.size.add(1)
+                self.size.add(1)
 
         # Pin the current Page
         self.tail_page_manager.pin(cur_pr.id_num.value, column_index)
@@ -588,21 +597,22 @@ class Table:
 
     def update_base_rid(self, column_index, rid, value):
         pr_id = rid // (PAGE_RANGE_MAX_RECORDS + 1)
-        cur_pr = self.page_ranges[pr_id]
+        with self.page_range_lock:
+            cur_pr = self.page_ranges[pr_id]
         # if (column_index < 0 or column_index > self.num_columns):
         # print("updating a rid in base " + str(column_index) + " out of bounds")
         # print("updating rid " + str(rid) + " @ col " + str(column_index) + " with value: " + str(value))
-        base_page_index = cur_pr.free_base_pages[column_index]
-        cur_page = cur_pr.base_pages[base_page_index]
-        # If page isn't in bufferpool
-        if cur_page == None:
-            # If we don't have enough space to bring in another page
-            self.check_need_evict()
+        with self.base_page_lock:
+            base_page_index = cur_pr.free_base_pages[column_index]
+            cur_page = cur_pr.base_pages[base_page_index]
+            # If page isn't in bufferpool
+            if cur_page == None:
+                # If we don't have enough space to bring in another page
+                self.check_need_evict()
 
-            cur_page = self.base_page_manager.fetch(cur_pr.id_num.value, base_page_index)
-            with self.tail_page_lock:
+                cur_page = self.base_page_manager.fetch(cur_pr.id_num.value, base_page_index)
                 self.page_ranges[pr_id].base_pages[base_page_index] = cur_page
-            self.size.add(1)
+                self.size.add(1)
 
         # Pin the page
         self.base_page_manager.pin(cur_pr.id_num.value, base_page_index)
@@ -619,10 +629,8 @@ class Table:
 
     def create_base_page(self, col_name):
         # Get the current page range
-        cur_pr = self.page_ranges[self.cur_page_range_id.value]
-
-       # Check if we have room for the new page
-        self.check_need_evict()
+        with self.page_range_lock:
+            cur_pr = self.page_ranges[self.cur_page_range_id.value]
 
         # check current PR can hold more
         self.create_new_pr_if_necessary()
@@ -632,10 +640,15 @@ class Table:
         new_page = Page()
         self.size.add(1)
         # also add page to the list of base pages in pr
-        cur_pr = self.page_ranges[self.cur_page_range_id.value]
+        with self.page_range_lock:
+            cur_pr = self.page_ranges[self.cur_page_range_id.value]
+
         with self.base_page_lock:
+            # Check if we have room for the new page
+            self.check_need_evict()
             cur_pr.base_pages.append(new_page)
             cur_pr.free_base_pages.append(len(cur_pr.base_pages) - 1)
+
         # Update LRU
         self.base_page_manager.update_page_usage(self.cur_page_range_id.value,
                                             len(cur_pr.base_pages) - 1)
@@ -660,26 +673,26 @@ class Table:
             for x in range(self.num_columns + 5):
                 self.create_base_page(x)
 
-        pr = self.page_ranges[pr_id]
-        index_relative = pr.free_base_pages[index]
-        cur_page = pr.base_pages[index_relative]
-        # If page isn't in bufferpool
-        if cur_page == None:
-            # If we don't have enough space to bring in another page
-            self.check_need_evict()
+        with self.page_range_lock:
+            pr = self.page_ranges[pr_id]
 
-            # Fetch the page
-            cur_page = self.base_page_manager.fetch(pr.id_num.value, index_relative)
-            with self.base_page_lock:
+        with self.base_page_lock:
+            index_relative = pr.free_base_pages[index]
+            cur_page = pr.base_pages[index_relative]
+        # If page isn't in bufferpool
+            if cur_page == None:
+                # If we don't have enough space to bring in another page
+                self.check_need_evict()
+
+                # Fetch the page
+                cur_page = self.base_page_manager.fetch(pr.id_num.value, index_relative)
                 self.page_ranges[pr_id].base_pages[index_relative] = cur_page
-            self.size.add(1)
+                self.size.add(1)
 
         # Pin the page
         self.base_page_manager.pin(pr.id_num.value, index_relative)
         error = cur_page.write(value)
         if error == -1:  # maximum size reached in page
-            # Check if we have room for the new page
-            self.check_need_evict()
             # similar to above check if we have space in page range/create if necessary/update
             # create new page
             page = Page()
@@ -688,6 +701,8 @@ class Table:
             # also add page to the list of base pages in pr
             page.write(value)
             with self.base_page_lock:
+                # Check if we have room for the new page
+                self.check_need_evict()
                 pr.base_pages.append(page)
                 pr.free_base_pages.append(len(pr.base_pages) - 1)
 
@@ -710,20 +725,20 @@ class Table:
 
     # creates a new page range if the current one gets filled up/does housekeeping stuff (update vals)
     def create_new_pr_if_necessary(self):
-        # get most recent page range from pr array
-        cur_pr = self.page_ranges[self.cur_page_range_id.value]
-        # check that this page range can still hold more page's
-        # print("current num pages in pr: " + str(cur_pr.num_base_pages))
-        # print("current page before cap check range id: " + str(self.cur_page_range_id))
-        if not cur_pr.page_range_has_capacity():
-            # self.actual_page_directory.append(cur_pr.end_rid_base)      # store the max rid into the array
-            self.cur_page_range_id.add(1)  # this pr is full - update the pr id
-            with self.page_range_lock:
+        with self.page_range_lock:
+            # get most recent page range from pr array
+            cur_pr = self.page_ranges[self.cur_page_range_id.value]
+            # check that this page range can still hold more page's
+            # print("current num pages in pr: " + str(cur_pr.num_base_pages))
+            # print("current page before cap check range id: " + str(self.cur_page_range_id))
+            if not cur_pr.page_range_has_capacity():
+                # self.actual_page_directory.append(cur_pr.end_rid_base)      # store the max rid into the array
+                self.cur_page_range_id.add(1)  # this pr is full - update the pr id
                 self.page_ranges.append(
-                    PageRange(self.cur_page_range_id, self.num_columns))  # add this new pr with new id to the PR list
+                        PageRange(self.cur_page_range_id, self.num_columns))  # add this new pr with new id to the PR list
 
-        # need to reassign cur pr in case we created a new PR (should not ref to old one)
-        cur_pr = self.page_ranges[self.cur_page_range_id.value]
-        # increment the num pages count in either case (full or not full since we are adding a new page)
-        cur_pr.num_base_pages.add(1)
+            # need to reassign cur pr in case we created a new PR (should not ref to old one)
+            cur_pr = self.page_ranges[self.cur_page_range_id.value]
+            # increment the num pages count in either case (full or not full since we are adding a new page)
+            cur_pr.num_base_pages.add(1)
 
