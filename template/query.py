@@ -306,12 +306,14 @@ class Query:
 
             # Get desired columns' page indices
             columns = []
+            print(f"RID {rid}")
             for i in range(len(query_columns)):
+                print(f"i = {i}:")
                 # Check schema (base page or tail page?)
-                # If base page
                 has_prev_tail_pages = self.bit_is_set(i + NUM_CONSTANT_COLUMNS, schema_data_int)
-                if indirection_data <= tps_data or (query_columns[i] == 1 and not has_prev_tail_pages):
-
+                # If base page
+                if indirection_data <= tps_data or (not has_prev_tail_pages):
+                    print("Grabbing values from Base Page")
                     with self.table.page_range_lock:
                         base_page_index = base_page_indices[i + NUM_CONSTANT_COLUMNS]
                         base_page = page_range.base_pages[base_page_index]
@@ -331,13 +333,14 @@ class Query:
                     base_data = base_page.get_record_int(offset)
                     # print("index",i,"appending base data", base_data)
                     columns.append(base_data)
-                    # print(f"Column {i+4} -> Base Page Index: {base_page_index} -> Data: {base_data}")
+                    print(f"Column {i+4} -> Base Page Index: {base_page_index} -> Data: {base_data}")
 
                     # Unpin the page
                     self.table.base_page_manager.unpin(pr_id, base_page_index)
                     self.table.base_page_manager.update_page_usage(pr_id, base_page_index)
                 # If tail page
                 elif query_columns[i] == 1 and has_prev_tail_pages:  # query this column, but it's been updated before
+                    print("Grabbing values from Tail Page")
                     # get tail page value of this column
                     # grab index and offset of this tail page
                     column_index = i + NUM_CONSTANT_COLUMNS
@@ -422,7 +425,7 @@ class Query:
                                                                correct_tail_page[0])
                             self.table.tail_page_manager.update_page_usage(pr_id,
                                                                            correct_tail_page[0])
-
+                    print(f"Appending tail_data {tail_data} to columns")
                     columns.append(tail_data)
             print(f"rid: {rid}")
             print(f"key: {key}")
@@ -796,8 +799,8 @@ class Query:
             if len(record) == 0: continue
             data = record[0].columns
             print(f"In sum received data: {data}")
-            count += data[0]
-            print(f"Adding data value {data[0]}, new count = {count}\n")
+            count += data[aggregate_column_index]
+            print(f"Adding data value {data[aggregate_column_index]}, new count = {count}\n")
         return count
 
     """
