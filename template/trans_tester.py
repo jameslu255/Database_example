@@ -1,7 +1,7 @@
 from template.db import Database
 from template.query import Query
-from template.transaction import Transaction
 from template.transaction_worker import TransactionWorker
+from template.transaction import Transaction
 
 import threading
 from random import choice, randint, sample, seed

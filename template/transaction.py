@@ -1,6 +1,6 @@
 from template.table import Table, Record
 from template.index import Index
-# from template.logger import Logger
+from template.logger import Logger
 
 
 class Transaction:
@@ -40,7 +40,7 @@ class Transaction:
             query_type = str(query.__name__)
             # print(query_type)
 
-            result = query(*args, txn_id=self.id)
+            result = query(*args)
             # If the query has failed the transaction should abort
             if result == False:
                 return self.abort()
@@ -49,7 +49,7 @@ class Transaction:
     def abort(self):
         # print("aborting! Query failed for", self.id)
         # write 'tid aborted'
-        self.logger.abort(self.id)
+        # self.logger.abort(self.id)
         # q = self.logger.read_tid(self.id)
         # print("results")
         # print(q)
@@ -62,6 +62,6 @@ class Transaction:
     def commit(self):
         # print("commiting! Query successful for",self.id)
         # write 'tid commited'
-        self.logger.commit(self.id)
+        # self.logger.commit(self.id)
 
         return True
