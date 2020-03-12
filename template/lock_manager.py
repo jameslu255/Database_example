@@ -7,29 +7,40 @@ class LockManager:
         self.exclusive_locks = dict()
         self._rw_lock = ReaderWriterLock()
 
-    def _update(self, locks, rid, val):
-        self._rw_lock.start_write()
-        if rid in locks:
-            locks[rid] += val
+    def _contains(self, key):
+        self._rw_lock.start_read()
+        doesContain = key in self.exclusive_locks
+        self._rw_lock.end_read()
+        return doesContain
+
+    def _get(self, key):
+        self._rw_lock.start_read()
+        val = self.exclusive_locks[key]
+        self._rw_lock.end_read()
+        return val 
+
+    def _update(self, rid, val):
+        if self._contains(rid):
+            self._rw_lock.start_write()
+            self.exclusive_locks[rid] += val
+            self._rw_lock.end_write()
         else:
-            locks[rid] = 1
-        self._rw_lock.end_write()
+            self._rw_lock.start_write()
+            self.exclusive_locks[rid] = 1
+            self._rw_lock.end_write()
 
     def acquire(self, rid, mode):
         # Acquire read lock
-        self._rw_lock.start_read()
         # Cannot acquire exclusive lock
-        if rid in self.exclusive_locks and self.exclusive_locks[rid] > 0:
+        if self._contains(rid) and self._get(rid) > 0:
             # print(f"Cannot Acquire lock, rid: {rid}")
-            self._rw_lock.end_read()
             return False
-        self._rw_lock.end_read()
         if mode == 'R':
             # print(f"Acquiring read lock, rid: {rid}")
             pass
         elif mode == 'W':
             # print(f"Acquiring write lock, rid: {rid}")
-            self._update(self.exclusive_locks, rid, 1)
+            self._update(rid, 1)
         else:
             return False
         
@@ -41,7 +52,7 @@ class LockManager:
             pass
         elif mode == 'W':
             # print(f"Releasing write lock, rid: {rid}")
-            self._update(self.exclusive_locks, rid, -1)
+            self._update(rid, -1)
         else:
             return False
         
