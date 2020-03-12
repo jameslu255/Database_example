@@ -21,7 +21,6 @@ G1 = "G1"
 G2 = "G2"
 G3 = "G3"
 G4 = "G4"
-
 def print_header_line(count):
     for j in range(count):
         print("_", end='')
@@ -34,8 +33,7 @@ grades_table = db.create_table('Grades', 5, 0)
 
 keys = []
 records = {}
-# num_threads = 8
-num_threads = 1
+num_threads = 8
 seed(8739878934)
 
 # db = Database()
@@ -59,8 +57,7 @@ seed(8739878934)
 # th1.start()
 
 # Generate random records
-# for i in range(0, 10000):
-for i in range(0, 10):
+for i in range(0, 10000):
     key = 92106429 + i
     keys.append(key)
     records[key] = [key, 0, 0, 0, 0]
@@ -74,10 +71,8 @@ for i in range(num_threads):
 
 # generates 10k random transactions
 # each transaction will increment the first column of a record 5 times
-# for i in range(1000):
-for i in range(1):
-    # k = randint(0, 2000 - 1)
-    k = randint(0, 1)
+for i in range(1000):
+    k = randint(0, 2000 - 1)
     transaction = Transaction()
     for j in range(5):
         key = keys[k * 5 + j]
@@ -105,61 +100,62 @@ print(num_committed_transactions, 'transaction committed.')
 query = Query(grades_table)
 s = query.sum(keys[0], keys[-1], 1)
 
-# ---------------------------------------- Print Table ----------------------------------------
-for (i, y) in enumerate(grades_table.page_ranges):
-    print_header_line(104)
-    page_range_header = PAGE_RANGE + str(y.id_num.value)
-    print(page_range_header.center(100, ' '))
-    print_header_line(104)
-    print(BASE_PAGES.center(104, ' '))
-    print(INDIRECTION.center(12, ' '), end='|')
-    print(RID.center(12, ' '), end='|')
-    print(TIME.center(12, ' '), end='|')
-    print(SCHEMA.center(12, ' '), end='|')
-    print(TPS.center(12, ' '), end='|')
-    print(KEY.center(12, ' '), end='|')
-    print(G1.center(12, ' '), end='|')
-    print(G2.center(12, ' '), end='|')
-    print(G3.center(12, ' '), end='|')
-    print(G4.center(12, ' '), end='|')
-    print()
-    for x in range(y.base_pages[0].num_records):
-        for (page_num, page) in enumerate(y.base_pages):
-            byte_val = page.data[x*8:(x*8 + 8)]
-            val = int.from_bytes(byte_val, "big")
-            print(str(val).center(12, ' '), end='|')
-        print()
-#
-    num_tail_pages = len(y.tail_pages)
-    num_tail_page_sets = int(num_tail_pages / (grades_table.num_columns + 5))
-    tail_page_set_start = 0
-    tail_page_set_end = 4 + grades_table.num_columns + 1
-    for n in range(num_tail_page_sets):
-        tail_page_header = TAIL_PAGE + str(n)
-        print(tail_page_header.center(104, ' '))
-        print(INDIRECTION.center(12, ' '), end='|')
-        print(RID.center(12, ' '), end='|')
-        print(TIME.center(12, ' '), end='|')
-        print(SCHEMA.center(12, ' '), end='|')
-        print(BASE_RID.center(12, ' '), end='|')
-        print(KEY.center(12, ' '), end='|')
-        print(G1.center(12, ' '), end='|')
-        print(G2.center(12, ' '), end='|')
-        print(G3.center(12, ' '), end='|')
-        print(G4.center(12, ' '), end='|')
-        print()
-        current_tail_page = y.tail_pages[tail_page_set_start]
-        for x in range(current_tail_page.num_records):
-            for (page_num, page) in enumerate(y.tail_pages[tail_page_set_start:tail_page_set_end]):
-                byte_val = page.data[x * 8:(x * 8 + 8)]
-                val = int.from_bytes(byte_val, "big")
-                print(str(val).center(12, ' '), end='|')
-                # if page_num == tail_page_set_end:
-                #     break
-            print()
-        tail_page_set_start += 4 + grades_table.num_columns + 1
-        tail_page_set_end += 4 + grades_table.num_columns + 1
-    print_header_line(104)
+
+# # -------------------- Print Table --------------------
+# for (i, y) in enumerate(grades_table.page_ranges):
+#     print_header_line(104)
+#     page_range_header = PAGE_RANGE + str(y.id_num.value)
+#     print(page_range_header.center(100, ' '))
+#     print_header_line(104)
+#     print(BASE_PAGES.center(104, ' '))
+#     print(INDIRECTION.center(12, ' '), end='|')
+#     print(RID.center(12, ' '), end='|')
+#     print(TIME.center(12, ' '), end='|')
+#     print(SCHEMA.center(12, ' '), end='|')
+#     print(TPS.center(12, ' '), end='|')
+#     print(KEY.center(12, ' '), end='|')
+#     print(G1.center(12, ' '), end='|')
+#     print(G2.center(12, ' '), end='|')
+#     print(G3.center(12, ' '), end='|')
+#     print(G4.center(12, ' '), end='|')
+#     print()
+#     for x in range(y.base_pages[0].num_records):
+#         for (page_num, page) in enumerate(y.base_pages):
+#             byte_val = page.data[x*8:(x*8 + 8)]
+#             val = int.from_bytes(byte_val, "big")
+#             print(str(val).center(12, ' '), end='|')
+#         print()
+# #
+#     num_tail_pages = len(y.tail_pages)
+#     num_tail_page_sets = int(num_tail_pages / (grades_table.num_columns + 5))
+#     tail_page_set_start = 0
+#     tail_page_set_end = 4 + grades_table.num_columns + 1
+#     for n in range(num_tail_page_sets):
+#         tail_page_header = TAIL_PAGE + str(n)
+#         print(tail_page_header.center(104, ' '))
+#         print(INDIRECTION.center(12, ' '), end='|')
+#         print(RID.center(12, ' '), end='|')
+#         print(TIME.center(12, ' '), end='|')
+#         print(SCHEMA.center(12, ' '), end='|')
+#         print(BASE_RID.center(12, ' '), end='|')
+#         print(KEY.center(12, ' '), end='|')
+#         print(G1.center(12, ' '), end='|')
+#         print(G2.center(12, ' '), end='|')
+#         print(G3.center(12, ' '), end='|')
+#         print(G4.center(12, ' '), end='|')
+#         print()
+#         current_tail_page = y.tail_pages[tail_page_set_start]
+#         for x in range(current_tail_page.num_records):
+#             for (page_num, page) in enumerate(y.tail_pages[tail_page_set_start:tail_page_set_end]):
+#                 byte_val = page.data[x * 8:(x * 8 + 8)]
+#                 val = int.from_bytes(byte_val, "big")
+#                 print(str(val).center(12, ' '), end='|')
+#                 # if page_num == tail_page_set_end:
+#                 #     break
+#             print()
+#         tail_page_set_start += 4 + grades_table.num_columns + 1
+#         tail_page_set_end += 4 + grades_table.num_columns + 1
+#     print_header_line(104)
 # # ----------------------------------------------------------------------------------------------------
 if s != num_committed_transactions * 5:
     print('Expected sum:', num_committed_transactions * 5, ', actual:', s, '. Failed.')

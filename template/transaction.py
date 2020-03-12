@@ -16,7 +16,7 @@ class Transaction:
         
         self.id = self.logger.getNumTransaction()
         
-        print("this is transaction #",self.id)
+        # print("this is transaction #",self.id)
         
         pass
 

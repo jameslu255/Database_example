@@ -81,8 +81,8 @@ class Query:
                     indirection_page = self.table.base_page_manager.fetch(cur_pr.id_num.value, indirection_index)
                     cur_pr.base_pages[indirection_index] = indirection_page
                     self.table.size.add(1)
-
-            indirection_value = indirection_page.get_record_int(offset)
+            with self.table.r_lock:
+                indirection_value = indirection_page.get_record_int(offset)
 
             if indirection_value == 0:
                 return old_val  # return the old value for recovery purposes
@@ -114,8 +114,8 @@ class Query:
                         indirection_page = self.table.tail_page_manager.fetch(cur_pr.id_num.value, indirection_index)
                         cur_pr.tail_pages[indirection_index] = indirection_page
                         self.table.size.add(1)
-
-                    indirection_value = indirection_page.get_record_int(indirection_offset)
+                    with self.table.r_lock:
+                        indirection_value = indirection_page.get_record_int(indirection_offset)
                     self.table.tail_page_manager.unpin(cur_pr.id_num.value, indirection_index)
                     self.table.tail_page_manager.update_page_usage(cur_pr.id_num.value, indirection_index)
                     # update index to find the previous page for this column
@@ -211,7 +211,6 @@ class Query:
 
     # add for loop to run it again multiple times with key being score and given a column number.
     def select(self, key, column, query_columns, txn_id=0, abort=False):
-        print(f"----------------------------------- select -----------------------------------")
         if abort:
             Query.abort_sem.acquire()
         # if key not in self.table.keys:
@@ -256,7 +255,8 @@ class Query:
 
             # Pin the page
             self.table.base_page_manager.pin(pr_id, indirection_page_index)
-            indirection_data = indirection_page.get_record_int(offset)
+            with self.table.r_lock:
+                indirection_data = indirection_page.get_record_int(offset)
             # Unpin the page
             self.table.base_page_manager.unpin(pr_id, indirection_page_index)
             self.table.base_page_manager.update_page_usage(pr_id, indirection_page_index)
@@ -276,8 +276,8 @@ class Query:
                     schema_page = self.table.base_page_manager.fetch(pr_id, schema_page_index)
                     self.table.page_ranges[pr_id].base_pages[schema_page_index] = schema_page
                     self.table.size.add(1)
-
-            schema_data_int = schema_page.get_record_int(offset)
+            with self.table.r_lock:
+                schema_data_int = schema_page.get_record_int(offset)
 
             # Unpin the page
             self.table.base_page_manager.unpin(pr_id, schema_page_index)
@@ -297,8 +297,8 @@ class Query:
                     tps_page = self.table.base_page_manager.fetch(pr_id, tps_page_index)
                     self.table.page_ranges[pr_id].base_pages[tps_page_index] = tps_page
                     self.table.size.add(1)
-
-            tps_data = tps_page.get_record_int(offset)
+            with self.table.r_lock:
+                tps_data = tps_page.get_record_int(offset)
 
             # Unpin the page
             self.table.base_page_manager.unpin(pr_id, tps_page_index)
@@ -306,14 +306,14 @@ class Query:
 
             # Get desired columns' page indices
             columns = []
-            print(f"RID {rid}")
+            # print(f"RID {rid}")
             for i in range(len(query_columns)):
-                print(f"i = {i}:")
+                # print(f"i = {i}:")
                 # Check schema (base page or tail page?)
                 has_prev_tail_pages = self.bit_is_set(i + NUM_CONSTANT_COLUMNS, schema_data_int)
                 # If base page
                 if indirection_data <= tps_data or (not has_prev_tail_pages):
-                    print("Grabbing values from Base Page")
+                    # print("Grabbing values from Base Page")
                     with self.table.page_range_lock:
                         base_page_index = base_page_indices[i + NUM_CONSTANT_COLUMNS]
                         base_page = page_range.base_pages[base_page_index]
@@ -329,18 +329,18 @@ class Query:
                             self.table.page_ranges[pr_id].base_pages[base_page_index] = base_page
                             self.table.size.add(1)
 
-
-                    base_data = base_page.get_record_int(offset)
+                    with self.table.r_lock:
+                        base_data = base_page.get_record_int(offset)
                     # print("index",i,"appending base data", base_data)
                     columns.append(base_data)
-                    print(f"Column {i+4} -> Base Page Index: {base_page_index} -> Data: {base_data}")
+                    # print(f"Column {i+4} -> Base Page Index: {base_page_index} -> Data: {base_data}")
 
                     # Unpin the page
                     self.table.base_page_manager.unpin(pr_id, base_page_index)
                     self.table.base_page_manager.update_page_usage(pr_id, base_page_index)
                 # If tail page
                 elif query_columns[i] == 1 and has_prev_tail_pages:  # query this column, but it's been updated before
-                    print("Grabbing values from Tail Page")
+                    # print("Grabbing values from Tail Page")
                     # get tail page value of this column
                     # grab index and offset of this tail page
                     column_index = i + NUM_CONSTANT_COLUMNS
@@ -364,7 +364,8 @@ class Query:
                             self.table.size.add(1)
 
                     # print("tail_page size", tail_page.num_records, "offset", tail_page_offset)
-                    tail_data = tail_page.get_record_int(tail_page_offset)
+                    with self.table.r_lock:
+                        tail_data = tail_page.get_record_int(tail_page_offset)
                     # Unpin the page
                     self.table.tail_page_manager.unpin(pr_id, tail_page_index)
                     self.table.tail_page_manager.update_page_usage(pr_id, tail_page_index)
@@ -394,8 +395,8 @@ class Query:
                                                                                           indirection_index)
                                     self.table.page_ranges[pr_id].tail_pages[indirection_index] = indirection_page
                                     self.table.size.add(1)
-
-                            indirection_value = indirection_page.get_record_int(indirection_offset)
+                            with self.table.r_lock:
+                                indirection_value = indirection_page.get_record_int(indirection_offset)
                             # Unpin the page
                             self.table.tail_page_manager.unpin(pr_id, indirection_index)
                             self.table.tail_page_manager.update_page_usage(pr_id, indirection_index)
@@ -419,17 +420,15 @@ class Query:
 
                                     self.table.page_ranges[pr_id].tail_pages[correct_tail_page[0]] = tail_page
                                     self.table.size.add(1)
-
-                            tail_data = tail_page.get_record_int(correct_tail_page[1])
+                            with self.table.r_lock:
+                                tail_data = tail_page.get_record_int(correct_tail_page[1])
                             self.table.tail_page_manager.unpin(pr_id,
                                                                correct_tail_page[0])
                             self.table.tail_page_manager.update_page_usage(pr_id,
                                                                            correct_tail_page[0])
-                    print(f"Appending tail_data {tail_data} to columns")
+                    # print(f"Appending tail_data {tail_data} to columns")
                     columns.append(tail_data)
-            print(f"rid: {rid}")
-            print(f"key: {key}")
-            print(f"columns: {columns}")
+
             record.append(Record(rid, key, columns))
             self.table.lock_manager.release(rid, 'R')
 
@@ -560,8 +559,8 @@ class Query:
                     self.table.size.add(1)
                     # Pin the page
                     self.table.base_page_manager.pin(cur_pr.id_num.value, indirection_base_index)
-
-            indirection_value = indirection_base_page.get_record_int(rid_offset)
+            with self.table.r_lock:
+                indirection_value = indirection_base_page.get_record_int(rid_offset)
             indirection = indirection_value
             # Unpin the page
             self.table.base_page_manager.unpin(cur_pr.id_num.value, indirection_base_index)
@@ -595,7 +594,8 @@ class Query:
 
                 # print("indirection value: ", indirection_value)
                 # Get the schema encoding of the latest tail page
-                latest_schema = schema_tail_page.get_record_int(offset)
+                with self.table.r_lock:
+                    latest_schema = schema_tail_page.get_record_int(offset)
                 # Unpin the page
                 self.table.tail_page_manager.unpin(cur_pr.id_num.value, schema_tail_page_index)
                 self.table.tail_page_manager.update_page_usage(cur_pr.id_num.value, schema_tail_page_index)
@@ -658,8 +658,8 @@ class Query:
                     base_page = self.table.base_page_manager.fetch(cur_pr.id_num.value, base_page_index)
                     self.table.page_ranges[pr_id].base_pages[base_page_index] = base_page
                     self.table.size.add(1)
-
-            base_value = base_page.get_record_int(rid_offset)
+            with self.table.r_lock:
+                base_value = base_page.get_record_int(rid_offset)
             # Unpin the page
             self.table.base_page_manager.unpin(cur_pr.id_num.value, base_page_index)
             self.table.base_page_manager.update_page_usage(cur_pr.id_num.value, base_page_index)
@@ -700,8 +700,8 @@ class Query:
                         page = self.table.base_page_manager.fetch(cur_pr.id_num.value, page_index)
                         self.table.page_ranges[pr_id].base_pages[page_index] = page
                         self.table.size.add(1)
-
-                base_record_val = page.get_record_int(rid_offset)
+                with self.table.r_lock:
+                    base_record_val = page.get_record_int(rid_offset)
                 if (x != 0):
                     self.table.index.update_btree(x, base_record_val, rid_base, columns[x])  # james added this
         ### ------------------------------------------------------------------------------------------ ###
@@ -746,8 +746,8 @@ class Query:
                 schema_base_page = self.table.base_page_manager.fetch(cur_pr.id_num.value, schema_enc_base_page_idx)
                 self.table.page_ranges[pr_id].base_pages[schema_enc_base_page_idx] = schema_base_page
                 self.table.size.add(1)
-
-        last_base_schema_enc = schema_base_page.get_record_int(rid_offset)
+        with self.table.r_lock:
+            last_base_schema_enc = schema_base_page.get_record_int(rid_offset)
         self.table.base_page_manager.unpin(cur_pr.id_num.value, schema_enc_base_page_idx)
         self.table.base_page_manager.update_page_usage(cur_pr.id_num.value, schema_enc_base_page_idx)
 
@@ -791,16 +791,16 @@ class Query:
         for i in range(self.table.num_columns):
             query_columns.append(0)
         query_columns[aggregate_column_index] = 1
-        print(f"query_columns: {query_columns}")
+        # print(f"query_columns: {query_columns}")
         count = 0
         for i in range(start_range, end_range + 1):
-            print(f"\n\nCalling select with i = {i} and query_columns: {query_columns}")
             record = self.select(i, 0, query_columns)
             if len(record) == 0: continue
+
             data = record[0].columns
-            print(f"In sum received data: {data}")
+            # print(f"In sum received data: {data}")
             count += data[aggregate_column_index]
-            print(f"Adding data value {data[aggregate_column_index]}, new count = {count}\n")
+            # print(f"Adding data value {data[aggregate_column_index]}, new count = {count}\n")
         return count
 
     """
@@ -816,6 +816,7 @@ class Query:
         r = self.select(key, self.table.key, [1] * self.table.num_columns)[0]
         if r is not False:
             updated_columns = [None] * self.table.num_columns
+            # print("in increment r.columns[column] ", r.columns[column])
             updated_columns[column] = r.columns[column] + 1
             u = self.update(key, *updated_columns)
             return u
