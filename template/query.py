@@ -211,6 +211,7 @@ class Query:
 
     # add for loop to run it again multiple times with key being score and given a column number.
     def select(self, key, column, query_columns, txn_id=0, abort=False):
+        print(f"----------------------------------- select -----------------------------------")
         if abort:
             Query.abort_sem.acquire()
         # if key not in self.table.keys:
@@ -423,7 +424,9 @@ class Query:
                                                                            correct_tail_page[0])
 
                     columns.append(tail_data)
-
+            print(f"rid: {rid}")
+            print(f"key: {key}")
+            print(f"columns: {columns}")
             record.append(Record(rid, key, columns))
             self.table.lock_manager.release(rid, 'R')
 
@@ -778,16 +781,17 @@ class Query:
     """
 
     def sum(self, start_range, end_range, aggregate_column_index):
-        # print(f"----------------------------------- sum -----------------------------------")
+        print(f"----------------------------------- sum -----------------------------------")
         # print(f"start_range = {start_range}, end_range = {end_range}, aggregate_column_index = {aggregate_column_index}")
         # print(start_range, end_range)
         query_columns = []
         for i in range(self.table.num_columns):
             query_columns.append(0)
         query_columns[aggregate_column_index] = 1
-        # print(f"query_columns: {query_columns}")
+        print(f"query_columns: {query_columns}")
         count = 0
         for i in range(start_range, end_range + 1):
+            print(f"\n\nCalling select with i = {i} and query_columns: {query_columns}")
             record = self.select(i, 0, query_columns)
             if len(record) == 0: continue
             data = record[0].columns
