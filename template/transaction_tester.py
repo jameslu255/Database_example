@@ -32,11 +32,13 @@ grades_table = db.create_table('Grades', 5, 0)
 
 keys = []
 records = {}
-num_threads = 8
+# num_threads = 8
+num_threads = 1
 seed(8739878934)
 
 # Generate random records
 for i in range(0, 10000):
+# for i in range(0, 10):
     key = 92106429 + i
     keys.append(key)
     records[key] = [key, 0, 0, 0, 0]
@@ -50,7 +52,8 @@ for i in range(num_threads):
 
 # generates 10k random transactions
 # each transaction will increment the first column of a record 5 times
-for i in range(1000):
+# for i in range(1000):
+for i in range(1):
     k = randint(0, 2000 - 1)
     transaction = Transaction()
     for j in range(5):
