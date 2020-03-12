@@ -51,6 +51,7 @@ class Logger:
     def write(self, tid, command, old_val, new_val, bid):
         # writer requests for critical section
         Logger.sem_writer.acquire()
+        # print("old val: ", old_val)
         with open(self.file_name, 'a') as f:
             transaction = str(tid) + " " + str(command) + " " # + str(old_val) + " " + str(new_val) + " " + str(bid) + "\n"
             # print(transaction)

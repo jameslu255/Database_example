@@ -36,6 +36,26 @@ records = {}
 num_threads = 1
 seed(8739878934)
 
+# db = Database()
+#
+# grades_table = db.create_table('Grades', 5, 0)
+# #populate the table
+#
+# q = Query(grades_table)
+# # print(inspect.getfullargspec(q.update))
+# t1 = Transaction()
+# t2 = Transaction()
+# t3 = Transaction()
+# t1.add_query(q.insert, *[1, 2, 3, 4, 5])
+# t1.add_query(q.insert, *[0, 1, 2, 2, 5])
+# t2.add_query(q.insert, *[6, 7, 8, 9, 10])
+# t3.add_query(q.insert, *[6, 7, 8, 9, 10])
+# t3.add_query(q.insert, *[6, 7, 8, 9, 10])
+# t3.add_query(q.update,1, *[6, 7, 8, 9, 10])
+# txn_worker = TransactionWorker([t1,t2,t3])
+# th1 = threading.Thread(target=txn_worker.run)
+# th1.start()
+
 # Generate random records
 for i in range(0, 10000):
 # for i in range(0, 10):
