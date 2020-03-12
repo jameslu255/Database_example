@@ -98,7 +98,7 @@ class Table:
         self.lock_manager = LockManager()
 
         self.page_range_lock = threading.Lock()
-        self.r_lock  = threading.Lock()
+        self.r_lock = threading.RLock()
 
         # will increment each time we create a new page range (acts as unique ID used to differentiate PR's)
         # also will tell us index of current pr in the pr array
@@ -216,11 +216,13 @@ class Table:
         # Go through every row (every RID) --> i = RID
         for i in range(start_rid, end_rid + 1):
             offset = i - (PAGE_RANGE_MAX_RECORDS * page_range.id_num.value)
-            rid_data = rid_page.get_record_int(offset)
+            with self.r_lock:
+                rid_data = rid_page.get_record_int(offset)
             # print("looking into rid: " + str(rid_data))
             if rid_data != 0: # check if rid was not deleted
-                indirection = indirection_page.get_record_int(offset)
-                tps = tps_page.get_record_int(offset)
+                with self.r_lock:
+                    indirection = indirection_page.get_record_int(offset)
+                    tps = tps_page.get_record_int(offset)
 
                 # ------------------------- MERGE -------------------------
                 # Only merge records that have had updates since last merge
@@ -256,8 +258,8 @@ class Table:
                 if base_pages_copy[i] == None:
                     # Fetch the page from disk
                     base_pages_copy[i] = self.base_page_manager.fetch(page_range.id_num.value, i)
-
-                value = base_pages_copy[i].get_record_int(offset)
+                with self.r_lock:
+                    value = base_pages_copy[i].get_record_int(offset)
                 # Lock
                 self.replace(page_range.id_num.value, offset, page_range.base_pages, i, value)
                 # Unlock
@@ -351,8 +353,8 @@ class Table:
             indirection_page = self.base_page_manager.fetch(page_range.id_num.value, INDIRECTION_COLUMN)
             page_range.base_pages[INDIRECTION_COLUMN] = indirection_page
 
-
-        indirection_data = indirection_page.get_record_int(offset)
+        with self.r_lock:
+            indirection_data = indirection_page.get_record_int(offset)
         if indirection_data != 0:
             tail_page_indices = self.tail_page_directory[indirection_data]
 
@@ -363,9 +365,8 @@ class Table:
             schema_page = self.base_page_manager.fetch(page_range.id_num.value, SCHEMA_ENCODING_COLUMN)
             page_range.base_pages[SCHEMA_ENCODING_COLUMN] = schema_page
 
-
-
-        schema_data_int = schema_page.get_record_int(offset)
+        with self.r_lock:
+            schema_data_int = schema_page.get_record_int(offset)
 
         # Get desired columns' page indices
         data = []
@@ -384,8 +385,8 @@ class Table:
                     base_page = self.base_page_manager.fetch(page_range.id_num.value, column_index)
                     page_range.base_pages[column_index] = base_page
 
-
-                base_data = base_page.get_record_int(offset)
+                with self.r_lock:
+                    base_data = base_page.get_record_int(offset)
                 # print("index",i,"appending base data", base_data)
                 columns.append(base_data)
                 # print(f"Column {i+5} -> Base Page Index: {base_page_index} -> Data: {base_data}")
@@ -405,7 +406,8 @@ class Table:
                     page_range.tail_pages[tail_page_index] = tail_page
 
                 # print("tail_page size", tail_page.num_records, "offset", tail_page_offset)
-                tail_data = tail_page.get_record_int(tail_page_offset)
+                with self.r_lock:
+                    tail_data = tail_page.get_record_int(tail_page_offset)
 
                 # Get TPS
                 tps_tail_page_index_offset_tuple = tail_page_indices[TPS_COLUMN]
@@ -416,8 +418,8 @@ class Table:
                     # Fetch the page from disk
                     tps_tail_page = self.tail_page_manager.fetch(page_range.id_num.value, tps_tail_page_index)
                     page_range.tail_pages[tps_tail_page_index] = tps_tail_page
-
-                tps_tail_data = tps_tail_page.get_record_int(tps_tail_page_offset)
+                with self.r_lock:
+                    tps_tail_data = tps_tail_page.get_record_int(tps_tail_page_offset)
 
                 if (tail_page_offset == 0):
                     # we are in the right column, but the wrong tail page associated with it (spanning new tail pages every time)
@@ -433,8 +435,8 @@ class Table:
                             # Fetch the page from disk
                             indirection_page = self.tail_page_manager.fetch(page_range.id_num.value, indirection_index)
                             page_range.tail_pages[indirection_index] = indirection_page
-
-                        indirection_value = indirection_page.get_record_int(indirection_offset)
+                        with self.r_lock:
+                            indirection_value = indirection_page.get_record_int(indirection_offset)
 
                         # Break if we reached last merge
                         if indirection_value == stop_TID or indirection_value == 0:
@@ -451,8 +453,8 @@ class Table:
                             tail_page = self.tail_page_manager.fetch(page_range.id_num.value, correct_tail_page[0])
                             page_range.tail_pages[correct_tail_page[0]] = tail_page
 
-
-                        tail_data = tail_page.get_record_int(correct_tail_page[1])
+                        with self.r_lock:
+                            tail_data = tail_page.get_record_int(correct_tail_page[1])
                         # print("correct tail page data is in index",correct_tail_page[0],correct_tail_page[1])
 
                         # Get TPS from same TPS page at same offset that tail_data is coming from
@@ -462,8 +464,8 @@ class Table:
                             # Fetch the page from disk
                             tps_tail_page = self.tail_page_manager.fetch(page_range.id_num.value, correct_tps_tail_page[0])
                             page_range.tail_pages[correct_tps_tail_page[0]] = tps_tail_page
-
-                        tps_tail_data = tps_tail_page.get_record_int(correct_tps_tail_page[1])
+                        with self.r_lock:
+                            tps_tail_data = tps_tail_page.get_record_int(correct_tps_tail_page[1])
 
                 # Append found most recent data to columns
                 columns.append(tail_data)
