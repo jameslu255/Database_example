@@ -30,6 +30,10 @@ class Query:
 
         # grab the old value for recovery purposes
         old_val = self.select(key, 0, [1] * (self.table.num_columns - 1))
+        if old_val == False:
+            return False
+        else:
+            old_val = old_val[0].columns
 
         # get base rid
         # base_rid = self.table.keys[key]
@@ -124,7 +128,7 @@ class Query:
 
         self.table.lock_manager.release(base_rid, 'W')
         if txn_id > 0:
-            self.logger.write(txn_id, "delete", old_val, None, key)
+            self.logger.write(txn_id, "delete", old_val.columns, None, key)
 
         if abort:
             Query.abort_sem.release()
@@ -460,6 +464,14 @@ class Query:
         # return False
 
         rid_base = self.table.keys[key]  # rid of base page with key
+        # grab the old value for recovery purposes
+        old_val = self.select(key, 0, [1] * self.table.num_columns)
+        if old_val == False:
+            old_val = ["None"]
+            return False
+        else:
+            old_val = old_val[0].columns
+
         didAcquireLock = self.table.lock_manager.acquire(rid_base, 'W')
         if not didAcquireLock and abort == False:
             self.abort(txn_id)
@@ -467,8 +479,7 @@ class Query:
 
         self.table.tail_rid.add(1)
 
-        # grab the old value for recovery purposes
-        old_val = self.select(key, 0, [1] * self.table.num_columns)
+
 
         # Tail record default values
         indirection = 0
@@ -748,6 +759,7 @@ class Query:
         #         self.table.merge(cur_pr)
 
         self.table.lock_manager.release(rid_base, 'W')
+        # print("!!!!!!!BEFRORE WRITE IN UPDATE!!!!!!!!!!!! ", txn_id)
 
         if (txn_id > 0):
             self.logger.write(txn_id, "update", old_val, columns[1:], key)
@@ -819,13 +831,13 @@ class Query:
 
             if query_str == "update":
                 # function call: update(self, key, *columns, txn_id=0, abort=False)
-                self.update(key, *old_values, 0, True)  # To undo update: update w/ old values
+                self.update(key, *old_values, txn_id, True)  # To undo update: update w/ old values
             elif query_str == "insert":
                 # function call: delete(self, key, txn_id=0, abort=False):
-                self.delete(key, 0, True)  # To undo insert: delete
+                self.delete(key, txn_id, True)  # To undo insert: delete
             elif query_str == "delete":
                 # function call: insert(self, *columns, txn_id=0, abort=False):
-                self.insert(*old_values, 0, True)  # To undo delete: insert
+                self.insert(*old_values, txn_id, True)  # To undo delete: insert
 
     @staticmethod
     def parse_string_array(string):
