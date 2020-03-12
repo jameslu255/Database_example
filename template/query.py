@@ -781,7 +781,7 @@ class Query:
     """
 
     def sum(self, start_range, end_range, aggregate_column_index):
-        print(f"----------------------------------- sum -----------------------------------")
+        # print(f"----------------------------------- sum -----------------------------------")
         # print(f"start_range = {start_range}, end_range = {end_range}, aggregate_column_index = {aggregate_column_index}")
         # print(start_range, end_range)
         query_columns = []
@@ -795,9 +795,9 @@ class Query:
             record = self.select(i, 0, query_columns)
             if len(record) == 0: continue
             data = record[0].columns
-            # print(f"data: {data}")
+            print(f"In sum received data: {data}")
             count += data[0]
-            # print(f"count: {count}\n")
+            print(f"Adding data value {data[0]}, new count = {count}\n")
         return count
 
     """
