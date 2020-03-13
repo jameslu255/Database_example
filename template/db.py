@@ -22,7 +22,13 @@ class Database():
         for key in table_dict:
             # print("table id is " + str(key))
             # update tables array
-            self.tables.append(table_dict[key])
+            table = table_dict[key]
+            # Reinstantiate the locks and AtomicCounter
+            table.lock_manager.reset_lock()
+            table.base_page_manager.reset_lock()
+            table.tail_page_manager.reset_lock()
+            table.reset_counters()
+            self.tables.append(table)
 
         # print("fin open!" + str(len(self.tables)))
 

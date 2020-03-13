@@ -1,5 +1,6 @@
 from template.table import Table, Record
 from template.index import Index
+from template.logger import Logger
 
 class Transaction:
 
@@ -8,6 +9,15 @@ class Transaction:
     """
     def __init__(self):
         self.queries = []
+        
+        self.logger = Logger("log")
+        # update num transaction count on top of file
+        Logger.num_transactions.add(1)
+        
+        self.id = self.logger.getNumTransaction()
+        
+        # print("this is transaction #",self.id)
+        
         pass
 
     """
@@ -22,14 +32,35 @@ class Transaction:
         # query.method(*args)
         self.queries.append((query, args))
 
+    # If you choose to implement this differently this method must still return True if transaction commits or False on abort
     def run(self):
         for query, args in self.queries:
-            query(*args)
-        pass
+            query_type = str(query.__name__)
+            # print(query_type)
+
+            result = query(*args, txn_id = self.id)
+            # If the query has failed the transaction should abort
+            if result == False:
+                return self.abort()
+        return self.commit()
+
 
     def abort(self):
-        pass
+        # print("aborting! Query failed for", self.id)
+        # write 'tid aborted'
+        self.logger.abort(self.id)
+        # q = self.logger.read_tid(self.id)
+        # print("results")
+        # print(q)
+        # undo all the queries of this transaction
+        # q = self.logger.read_tid(self.id) # queries that happened already before the abort
+        self.queries = []
 
+        return False
+        
     def commit(self):
-        pass
+        # print("commiting! Query successful for",self.id)
+        # write 'tid commited'
+        self.logger.commit(self.id)
 
+        return True
