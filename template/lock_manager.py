@@ -5,42 +5,47 @@ import threading
 class LockManager:
     def __init__(self):
         self.exclusive_locks = dict()
-        self._rw_lock = ReaderWriterLock()
+        self.shared_locks = dict()
+        self.lock = threading.Lock()
 
-    def _contains(self, key):
-        self._rw_lock.start_read()
-        doesContain = key in self.exclusive_locks
-        self._rw_lock.end_read()
-        return doesContain
+    def _contains(self, locks, key):
+        with self.lock:
+            doesContain = key in locks
+            return doesContain
 
-    def _get(self, key):
-        self._rw_lock.start_read()
-        val = self.exclusive_locks[key]
-        self._rw_lock.end_read()
-        return val 
+    def _get(self, locks, key):
+        with self.lock:
+            val = locks[key]
+            return val 
 
-    def _update(self, rid, val):
-        if self._contains(rid):
-            self._rw_lock.start_write()
-            self.exclusive_locks[rid] += val
-            self._rw_lock.end_write()
+    def _update(self, locks, rid, val):
+        if self._contains(locks, rid):
+            with self.lock:
+                locks[rid] += val
         else:
-            self._rw_lock.start_write()
-            self.exclusive_locks[rid] = 1
-            self._rw_lock.end_write()
+            with self.lock:
+                locks[rid] = 1
+
+    def lock_exists(self, locks, rid):
+        return (self._contains(locks, rid) and
+            self._get(locks, rid) > 0)
 
     def acquire(self, rid, mode):
         # Acquire read lock
         # Cannot acquire exclusive lock
-        if self._contains(rid) and self._get(rid) > 0:
-            # print(f"Cannot Acquire lock, rid: {rid}")
-            return False
         if mode == 'R':
-            # print(f"Acquiring read lock, rid: {rid}")
-            pass
+            if self.lock_exists(self.exclusive_locks, rid):
+                # print(f"Cannot Acquire lock, rid: {rid}")
+                return False
+            else:
+                self._update(self.shared_locks, rid, 1)
         elif mode == 'W':
-            # print(f"Acquiring write lock, rid: {rid}")
-            self._update(rid, 1)
+            if (self.lock_exists(self.shared_locks, rid) or
+                self.lock_exists(self.exclusive_locks, rid)):
+                # print(f"Acquiring write lock, rid: {rid}")
+                return False
+            else:
+                self._update(self.exclusive_locks, rid, 1)
         else:
             return False
         
@@ -49,10 +54,12 @@ class LockManager:
     def release(self, rid, mode):
         if mode == 'R':
             # print(f"Releasing read lock, rid: {rid}")
-            pass
+            assert(self._contains(self.shared_locks, rid)), ("Cannot release unacquired shared lock")
+            self._update(self.shared_locks, rid, -1)
         elif mode == 'W':
+            assert(self._contains(self.exclusive_locks, rid)), ("Cannot release unacquired exclusive lock")
             # print(f"Releasing write lock, rid: {rid}")
-            self._update(rid, -1)
+            self._update(self.exclusive_locks, rid, -1)
         else:
             return False
         
@@ -61,10 +68,11 @@ class LockManager:
     def clear_locks(self):
         # remove all locks for serialization
         self.exclusive_locks.clear()
-        self._rw_lock.clear_locks()
-        self._rw_lock = None
+        self.shared_locks.clear()
+        # self._rw_lock.clear_locks()
+        self.lock = None
 
     def reset_lock(self):
         # resinstantiate the lock
-        if self._rw_lock == None:
-            self._rw_lock = ReaderWriterLock()
+        if self.lock == None:
+            self.lock = threading.Lock()
