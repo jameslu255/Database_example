@@ -6,27 +6,6 @@ from template.transaction_worker import TransactionWorker
 import threading
 from random import choice, randint, sample, seed
 
-# Header Constants
-PAGE_RANGE = "PAGE RANGE "
-BASE_PAGES = "Base Pages"
-TAIL_PAGE = "Tail Page "
-INDIRECTION = "indirection"
-RID = "RID"
-TIME = "time"
-SCHEMA = "schema"
-TPS = "TPS"
-BASE_RID = "Base RID"
-KEY = "key"
-G1 = "G1"
-G2 = "G2"
-G3 = "G3"
-G4 = "G4"
-def print_header_line(count):
-    for j in range(count):
-        print("_", end='')
-    print()
-
-
 db = Database()
 db.open('ECS165')
 grades_table = db.create_table('Grades', 5, 0)
@@ -35,26 +14,6 @@ keys = []
 records = {}
 num_threads = 8
 seed(8739878934)
-
-# db = Database()
-#
-# grades_table = db.create_table('Grades', 5, 0)
-# #populate the table
-#
-# q = Query(grades_table)
-# # print(inspect.getfullargspec(q.update))
-# t1 = Transaction()
-# t2 = Transaction()
-# t3 = Transaction()
-# t1.add_query(q.insert, *[1, 2, 3, 4, 5])
-# t1.add_query(q.insert, *[0, 1, 2, 2, 5])
-# t2.add_query(q.insert, *[6, 7, 8, 9, 10])
-# t3.add_query(q.insert, *[6, 7, 8, 9, 10])
-# t3.add_query(q.insert, *[6, 7, 8, 9, 10])
-# t3.add_query(q.update,1, *[6, 7, 8, 9, 10])
-# txn_worker = TransactionWorker([t1,t2,t3])
-# th1 = threading.Thread(target=txn_worker.run)
-# th1.start()
 
 # Generate random records
 for i in range(0, 10000):
@@ -100,63 +59,6 @@ print(num_committed_transactions, 'transaction committed.')
 query = Query(grades_table)
 s = query.sum(keys[0], keys[-1], 1)
 
-
-# # -------------------- Print Table --------------------
-# for (i, y) in enumerate(grades_table.page_ranges):
-#     print_header_line(104)
-#     page_range_header = PAGE_RANGE + str(y.id_num.value)
-#     print(page_range_header.center(100, ' '))
-#     print_header_line(104)
-#     print(BASE_PAGES.center(104, ' '))
-#     print(INDIRECTION.center(12, ' '), end='|')
-#     print(RID.center(12, ' '), end='|')
-#     print(TIME.center(12, ' '), end='|')
-#     print(SCHEMA.center(12, ' '), end='|')
-#     print(TPS.center(12, ' '), end='|')
-#     print(KEY.center(12, ' '), end='|')
-#     print(G1.center(12, ' '), end='|')
-#     print(G2.center(12, ' '), end='|')
-#     print(G3.center(12, ' '), end='|')
-#     print(G4.center(12, ' '), end='|')
-#     print()
-#     for x in range(y.base_pages[0].num_records):
-#         for (page_num, page) in enumerate(y.base_pages):
-#             byte_val = page.data[x*8:(x*8 + 8)]
-#             val = int.from_bytes(byte_val, "big")
-#             print(str(val).center(12, ' '), end='|')
-#         print()
-# #
-#     num_tail_pages = len(y.tail_pages)
-#     num_tail_page_sets = int(num_tail_pages / (grades_table.num_columns + 5))
-#     tail_page_set_start = 0
-#     tail_page_set_end = 4 + grades_table.num_columns + 1
-#     for n in range(num_tail_page_sets):
-#         tail_page_header = TAIL_PAGE + str(n)
-#         print(tail_page_header.center(104, ' '))
-#         print(INDIRECTION.center(12, ' '), end='|')
-#         print(RID.center(12, ' '), end='|')
-#         print(TIME.center(12, ' '), end='|')
-#         print(SCHEMA.center(12, ' '), end='|')
-#         print(BASE_RID.center(12, ' '), end='|')
-#         print(KEY.center(12, ' '), end='|')
-#         print(G1.center(12, ' '), end='|')
-#         print(G2.center(12, ' '), end='|')
-#         print(G3.center(12, ' '), end='|')
-#         print(G4.center(12, ' '), end='|')
-#         print()
-#         current_tail_page = y.tail_pages[tail_page_set_start]
-#         for x in range(current_tail_page.num_records):
-#             for (page_num, page) in enumerate(y.tail_pages[tail_page_set_start:tail_page_set_end]):
-#                 byte_val = page.data[x * 8:(x * 8 + 8)]
-#                 val = int.from_bytes(byte_val, "big")
-#                 print(str(val).center(12, ' '), end='|')
-#                 # if page_num == tail_page_set_end:
-#                 #     break
-#             print()
-#         tail_page_set_start += 4 + grades_table.num_columns + 1
-#         tail_page_set_end += 4 + grades_table.num_columns + 1
-#     print_header_line(104)
-# # ----------------------------------------------------------------------------------------------------
 if s != num_committed_transactions * 5:
     print('Expected sum:', num_committed_transactions * 5, ', actual:', s, '. Failed.')
 else:
